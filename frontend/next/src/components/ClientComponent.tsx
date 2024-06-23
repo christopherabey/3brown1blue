@@ -23,7 +23,6 @@ interface Message {
 export function ClientComponent({ accessToken }: { accessToken: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [video, setVideo] = useState<boolean>(false);
-  const [mic, setMic] = useState<boolean>(false);
   const textareaRef: RefObject<HTMLTextAreaElement> = useRef(null);
   const [videoID, setVideoID] = useState<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -45,10 +44,6 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
 
   function handleVideoClick() {
     setVideo((prev) => !prev);
-  }
-
-  function handleMicClick() {
-    setMic((prev) => !prev);
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -162,7 +157,6 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
 
   return (
     <VoiceProvider auth={{ type: "accessToken", value: accessToken }}>
-      <Controls />
       <Messages />
       <div className="flex flex-col h-screen">
         <div className="flex-1 relative grid grid-cols-[1fr_300px] overflow-hidden">
@@ -230,18 +224,7 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
           </div>
         </div>
         <div className="bg-background/50 backdrop-blur-sm border-t flex items-center justify-center gap-4 p-4">
-          <Button
-            onClick={handleMicClick}
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground"
-          >
-            {mic ? (
-              <MicIcon className="w-6 h-6" />
-            ) : (
-              <MicIcon className="w-6 h-6" stroke="red" />
-            )}
-          </Button>
+          <Controls />
           <Button
             onClick={handleVideoClick}
             variant="ghost"
@@ -259,28 +242,6 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
     </VoiceProvider>
   );
 }
-
-const MicIcon = (props: any) => {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={props.stroke === "red" ? "red" : "currentColor"}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-      <line x1="12" x2="12" y1="19" y2="22" />
-      {props.stroke === "red" && <line x1="1" y1="1" x2="23" y2="23" />}
-    </svg>
-  );
-};
 
 function SendIcon(props: any) {
   return (
