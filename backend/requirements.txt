@@ -9,3 +9,4 @@ openai
 pydub
 pydantic
 lmnt
+groq

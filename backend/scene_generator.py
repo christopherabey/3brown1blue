@@ -34,6 +34,9 @@ Two elements should not be in the same location at the same time. Ensure that ev
 The classname of the root animation should always be VideoScene.
 """
 
+VOICE_ID = "7d21119e-bb5d-4416-8164-9170ec4952c2"
+# VOICE_ID = "caleb"
+
 # 480p15 is the resolution and frame rate of the video, change if we want to change the resolution
 VIDEO_INTERNAL_PATH = "videos/video/480p15/video.mp4"
 
@@ -90,7 +93,7 @@ class SceneGenerator:
         :param video_id: Video id (string)
         """
         scene_transcription = self.scene_transcriptions[scene_id]
-        synthesis = await speech_client.synthesize(scene_transcription, voice='lily', format='wav')
+        synthesis = await speech_client.synthesize(scene_transcription, voice=VOICE_ID, format='wav')
         audio_path = f"{GENERATIONS_PATH}/{video_id}/{scene_id}/audio.wav"
         # if audio path does not exist, create it
         if not os.path.exists(f"{GENERATIONS_PATH}/{video_id}/{scene_id}"):
@@ -119,7 +122,7 @@ class SceneGenerator:
 
         while iteration < MAX_ITERATIONS:
             response = await client.chat.completions.create(
-                model="gpt-4o",
+                model=os.getenv("LLM_MODEL"),
                 messages=messages
             )
             logger.info(f"Generated response: {response}")
@@ -271,7 +274,11 @@ class SceneGenerator:
 
 
 async def main():
-    sg = SceneGenerator(["A scene description", "Another scene description"])
+    examples = [
+        "Bananas are an odd fruit. They are berries, but strawberries are not. They are also a herb, not a fruit. Bananas are a great source of potassium.",
+        "This is a scene about the history of the internet. The internet was created in 1969 by the US Department of Defense. It was originally called ARPANET. The internet has revolutionized the way we communicate and access information."
+    ]
+    sg = SceneGenerator(examples)
     await sg.generate_all_scenes()
 
 if __name__ == "__main__":

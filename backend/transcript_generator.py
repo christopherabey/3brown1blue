@@ -5,6 +5,7 @@ from client import client
 from logger import logger
 import json
 import asyncio
+import os
 
 SYSTEM_TRANSCRIPTION_PROMPT = """
 You are an expert teacher of topics, similar to 3 Blue 1 Brown. Given a user's question about a topic, you are to generate a transcript for a video that will explain the topic.
@@ -58,7 +59,7 @@ class TranscriptGenerator:
 
         while iteration < MAX_ITERATIONS:
             response = await client.chat.completions.create(
-                model="gpt-4o",
+                model=os.getenv("LLM_MODEL"),
                 messages=messages,
                 temperature=round(iteration/MAX_ITERATIONS, 1) # temperature increase heuristic
             )            
