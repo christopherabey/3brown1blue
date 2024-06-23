@@ -1,25 +1,33 @@
 "use client";
-
-import { useState, useRef, RefObject } from "react";
+import React, { useState, useRef, RefObject } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import Message from "@/components/ui/message";
-import VideoStream from "./videostream";
-
-// Dynamically import the Webcam component for client-side rendering
-// const Webcam = dynamic(() => import("@/components/webcam"), { ssr: false });
+import VideoStream from "@/components/videostream"; // Adjust the path as per your file structure
 
 interface Message {
   avatarSrc: string;
   avatarFallback: string;
   author: string;
   text: string;
+  backgroundColor: string;
+  side: "user" | "receiver";
 }
 
 export function Page() {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [video, setVideo] = useState<boolean>(false);
+  const [mic, setMic] = useState<boolean>(false);
   const textareaRef: RefObject<HTMLTextAreaElement> = useRef(null);
+
+  function handleVideoClick() {
+    setVideo((prev) => !prev);
+  }
+
+  function handleMicClick() {
+    setMic((prev) => !prev);
+  }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -48,13 +56,13 @@ export function Page() {
           avatarFallback: "OA",
           author: "Alex",
           text: messageText,
+          backgroundColor: "blue",
+          side: "user",
         },
       ]);
 
       textarea.value = "";
     }
-
-    // Create Message component that displays the chat message in the chat window
   }
 
   return (
@@ -68,6 +76,10 @@ export function Page() {
                 src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
                 controls
               />
+              {/* Overlay VideoStream component in the top right corner */}
+              <div className="absolute top-4 right-4 z-10">
+                {video && <VideoStream width={200} height={150} />}
+              </div>
             </div>
           </div>
         </div>
@@ -104,20 +116,36 @@ export function Page() {
         </div>
       </div>
       <div className="bg-background/50 backdrop-blur-sm border-t flex items-center justify-center gap-4 p-4">
-        <Button variant="ghost" size="icon" className="text-muted-foreground">
-          <MicIcon className="w-6 h-6" />
+        <Button
+          onClick={handleMicClick}
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground"
+        >
+          {mic ? (
+            <MicIcon className="w-6 h-6" />
+          ) : (
+            <MicIcon className="w-6 h-6" stroke="red" />
+          )}
         </Button>
-        <Button variant="ghost" size="icon" className="text-muted-foreground">
-          <VideoIcon className="w-6 h-6" />
+        <Button
+          onClick={handleVideoClick}
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground"
+        >
+          {video ? (
+            <VideoIcon className="w-6 h-6" />
+          ) : (
+            <VideoIcon stroke="red" className="w-6 h-6" />
+          )}
         </Button>
-        <VideoStream />
-        {/* <Webcam /> */}
       </div>
     </div>
   );
 }
 
-function MicIcon(props: any) {
+const MicIcon = (props: any) => {
   return (
     <svg
       {...props}
@@ -126,7 +154,7 @@ function MicIcon(props: any) {
       height="24"
       viewBox="0 0 24 24"
       fill="none"
-      stroke="currentColor"
+      stroke={props.stroke === "red" ? "red" : "currentColor"}
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -134,9 +162,10 @@ function MicIcon(props: any) {
       <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
       <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
       <line x1="12" x2="12" y1="19" y2="22" />
+      {props.stroke === "red" && <line x1="1" y1="1" x2="23" y2="23" />}
     </svg>
   );
-}
+};
 
 function SendIcon(props: any) {
   return (
@@ -158,7 +187,9 @@ function SendIcon(props: any) {
   );
 }
 
-function VideoIcon(props: any) {
+const VideoIcon = (props: any) => {
+  const { stroke = "currentColor" } = props; // Default stroke color is set to "currentColor" if not provided
+
   return (
     <svg
       {...props}
@@ -167,13 +198,25 @@ function VideoIcon(props: any) {
       height="24"
       viewBox="0 0 24 24"
       fill="none"
-      stroke="currentColor"
+      stroke={stroke} // Use the stroke color from props
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
-      <rect x="2" y="6" width="14" height="12" rx="2" />
+      {stroke === "red" ? (
+        <>
+          <line x1="1" y1="1" x2="23" y2="23" />
+          <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
+          <rect x="2" y="6" width="14" height="12" rx="2" />
+        </>
+      ) : (
+        <>
+          <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
+          <rect x="2" y="6" width="14" height="12" rx="2" />
+        </>
+      )}
     </svg>
   );
-}
+};
+
+export default Page;

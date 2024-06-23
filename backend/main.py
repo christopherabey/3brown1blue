@@ -53,11 +53,12 @@ async def websocket_endpoint(websocket: WebSocket):
                         tmp_file.write(frame_data)
                         tmp_file_path = tmp_file.name
 
-                        try:
-                            result = await socket.send_file(tmp_file_path)
-                            await websocket.send_json(result)
-                        except Exception as e:
-                            print(f"Error: {e}", sys.exc_info())
+                    try:
+                        result = await socket.send_file(tmp_file_path)
+                        await websocket.send_json(result)
+                    finally:
+                        os.remove(tmp_file_path)
+                        time.sleep(2)
                 else:
                     print("Received unexpected data format")
 
