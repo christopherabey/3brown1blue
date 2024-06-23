@@ -1,5 +1,6 @@
 import React from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "./avatar";
+import { cn } from "@/lib/utils";
 
 // Define the types for the props
 interface MessageProps {
@@ -16,8 +17,13 @@ const Message: React.FC<MessageProps> = ({
   text,
 }) => {
   return (
-    <div className="flex items-start gap-4 bg-blue-500">
-      <Avatar className="w-8 h-8 border">
+    <div className="flex items-start gap-4">
+      <Avatar
+        className={cn("w-8 h-8 border-2", {
+          "border-blue-800": author === "You",
+          "border-orange-800": author !== "You",
+        })}
+      >
         <AvatarImage src={avatarSrc} />
         <AvatarFallback>{avatarFallback}</AvatarFallback>
       </Avatar>

@@ -4,14 +4,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import Message from "@/components/ui/message";
 import VideoStream from "@/components/videostream"; // Adjust the path as per your file structure
-import { Progress } from "./ui/progress";
+import { LoadingSpinner } from "./ui/LoadingSpinner";
+import { useTheme } from "next-themes";
 
 interface Message {
   avatarSrc: string;
   avatarFallback: string;
   author: string;
   text: string;
-  backgroundColor: string;
   side: "user" | "receiver";
 }
 
@@ -22,9 +22,9 @@ export function Page() {
   const textareaRef: RefObject<HTMLTextAreaElement> = useRef(null);
   const [videoID, setVideoID] = useState<string>("");
   const [emotions, setEmotions] = useState<string>(""); // string of comma-separated emotions
-  const [progress, setProgress] = useState<number | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const progressInterval = useRef<NodeJS.Timeout | null>(null);
+  const { setTheme } = useTheme();
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
@@ -51,35 +51,6 @@ export function Page() {
     }
   }
 
-  function startProgress() {
-    setProgress(0);
-
-    // clear progress interval if it exists
-    if (progressInterval.current) {
-      clearInterval(progressInterval.current);
-    }
-
-    progressInterval.current = setInterval(() => {
-      setProgress((prevProgress) => {
-        if (prevProgress === 100) {
-          return 100;
-        } else if (prevProgress === null) {
-          return 1;
-        }
-        return prevProgress + 1;
-      });
-    }, 1000);
-  }
-
-  function stopProgress() {
-    setProgress(null);
-
-    // clear progress interval if it exists
-    if (progressInterval.current) {
-      clearInterval(progressInterval.current);
-    }
-  }
-
   function sendChatMessage() {
     const textarea = textareaRef.current;
 
@@ -98,16 +69,18 @@ export function Page() {
         {
           avatarSrc: "/placeholder-user.jpg",
           avatarFallback: "OA",
-          author: "Alex",
+          author: "You",
           text: messageText,
-          backgroundColor: "blue",
           side: "user",
         },
       ]);
 
       textarea.value = "";
 
-      startProgress();
+      setLoading(true);
+      setTheme("dark");
+
+      return;
       // Make a fetch request to the backend
       fetch("http://localhost:8000/generate/", {
         method: "POST",
@@ -134,27 +107,28 @@ export function Page() {
               avatarFallback: "OA",
               author: "3Blue1Brown",
               text: data.text,
-              backgroundColor: "brown",
               side: "receiver",
             },
           ]);
-          stopProgress();
+          setLoading(false);
         })
         .catch((error) => {
           // Handle errors
           console.error("Fetch error:", error);
-          stopProgress();
+          setLoading(false);
         });
     }
   }
 
   const VideoOrLoader = () => {
-    if (progress !== null) {
+    if (loading) {
       return (
         <div className="w-full h-full p-4 flex flex-col justify-center items-center align-middle">
-          <div className="text-muted-foreground">Loading...</div>
+          <div className="text-muted-foreground flex flex-row gap-2">
+            <LoadingSpinner />
+            Loading. This will take a minute...
+          </div>
           <iframe src="dinosaur_game.html" className="w-full h-80 my-8" />
-          <Progress value={progress} className="w-60 px-4" />
         </div>
       );
     } else if (videoID) {
@@ -163,6 +137,7 @@ export function Page() {
           className="w-full h-full object-cover"
           src={`http://localhost:8000/videos/${videoID}`}
           controls
+          autoPlay
         />
       );
     } else {
