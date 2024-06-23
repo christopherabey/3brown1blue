@@ -86,7 +86,7 @@ class SceneGenerator:
 
         while iteration < MAX_ITERATIONS:
             response = client.chat.completions.create(
-                model="gpt-4-turbo",
+                model="gpt-4o",
                 messages=messages
             )
             logger.info(f"Generated response: {response}")

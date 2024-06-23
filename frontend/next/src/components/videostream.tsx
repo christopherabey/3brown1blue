@@ -1,9 +1,9 @@
 import React, { useRef, useEffect } from "react";
 
-const VideoStream = () => {
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const socketRef = useRef(null);
+const VideoStream: React.FC = () => {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     // Initialize WebSocket connection
@@ -29,34 +29,49 @@ const VideoStream = () => {
     navigator.mediaDevices
       .getUserMedia({ video: true })
       .then((stream) => {
-        videoRef.current.srcObject = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
       })
       .catch((err) => console.error("Error accessing webcam: ", err));
 
     // Capture and send frames
     const sendFrame = () => {
-      const context = canvasRef.current.getContext("2d");
-      context.drawImage(
-        videoRef.current,
-        0,
-        0,
-        canvasRef.current.width,
-        canvasRef.current.height
-      );
-      canvasRef.current.toBlob((blob) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          socketRef.current.send(reader.result);
-        };
-        reader.readAsDataURL(blob);
-      }, "image/jpeg");
+      if (canvasRef.current && videoRef.current) {
+        const context = canvasRef.current.getContext("2d");
+        if (context) {
+          context.drawImage(
+            videoRef.current,
+            0,
+            0,
+            canvasRef.current.width,
+            canvasRef.current.height
+          );
+          canvasRef.current.toBlob(
+            (blob) => {
+              if (blob && socketRef.current) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  if (socketRef.current) {
+                    socketRef.current.send(reader.result as string);
+                  }
+                };
+                reader.readAsDataURL(blob);
+              }
+            },
+            "image/jpeg"
+          );
+        }
+      }
     };
 
     const interval = setInterval(sendFrame, 1000 / 30); // 30 fps
 
     return () => {
       clearInterval(interval);
-      socketRef.current.close();
+      if (socketRef.current) {
+        socketRef.current.close();
+      }
     };
   }, []);
 
