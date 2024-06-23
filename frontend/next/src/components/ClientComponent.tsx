@@ -19,13 +19,12 @@ interface Message {
   side: "user" | "receiver";
 }
 
-export function ClientComponent({ accessToken, }: { accessToken: string;} ) {
+export function ClientComponent({ accessToken }: { accessToken: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [video, setVideo] = useState<boolean>(false);
-  const [mic, setMic] = useState<boolean>(false);
   const textareaRef: RefObject<HTMLTextAreaElement> = useRef(null);
   const [videoID, setVideoID] = useState<string>("");
-  const scrollRef = useRef<HTMLDivElement>(null);  
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [emotions, setEmotions] = useState<string>(""); // string of comma-separated emotions
   const [progress, setProgress] = useState<number | null>(null);
   const progressInterval = useRef<NodeJS.Timeout | null>(null);
@@ -42,10 +41,6 @@ export function ClientComponent({ accessToken, }: { accessToken: string;} ) {
 
   function handleVideoClick() {
     setVideo((prev) => !prev);
-  }
-
-  function handleMicClick() {
-    setMic((prev) => !prev);
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -154,7 +149,6 @@ export function ClientComponent({ accessToken, }: { accessToken: string;} ) {
     }
   }
 
-
   const VideoOrLoader = () => {
     if (progress !== null) {
       return (
@@ -185,121 +179,91 @@ export function ClientComponent({ accessToken, }: { accessToken: string;} ) {
 
   return (
     <VoiceProvider auth={{ type: "accessToken", value: accessToken }}>
-      <Controls />
       <Messages />
-    <div className="flex flex-col h-screen">
-      <div className="flex-1 relative grid grid-cols-[1fr_300px] overflow-hidden">
-        <div className="relative">
-          <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm grid grid-cols-1 gap-2 p-4">
-            <div className="rounded-xl">
-              <VideoOrLoader />
-              {videoID ? <video
-                className="w-full h-full object-cover"
-                src={`http://localhost:8000/videos/${videoID}`}
-                controls
-              /> : <video
-              className="w-full h-full object-cover"
-              src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-              controls
-            />}
-              {/* Overlay VideoStream component in the top right corner */}
-              <div className="absolute top-4 right-4 z-10">
-              {video && (
-                  <VideoStream
-                    width={200}
-                    height={150}
-                    emotions={emotions}
-                    setEmotions={setEmotions}
+      <div className="flex flex-col h-screen">
+        <div className="flex-1 relative grid grid-cols-[1fr_300px] overflow-hidden">
+          <div className="relative">
+            <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm grid grid-cols-1 gap-2 p-4">
+              <div className="rounded-xl">
+                <VideoOrLoader />
+                {videoID ? (
+                  <video
+                    className="w-full h-full object-cover"
+                    src={`http://localhost:8000/videos/${videoID}`}
+                    controls
+                  />
+                ) : (
+                  <video
+                    className="w-full h-full object-cover"
+                    src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                    controls
                   />
                 )}
+                {/* Overlay VideoStream component in the top right corner */}
+                <div className="absolute top-4 right-4 z-10">
+                  {video && (
+                    <VideoStream
+                      width={200}
+                      height={150}
+                      emotions={emotions}
+                      setEmotions={setEmotions}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div className="bg-background/50 backdrop-blur-sm border-l flex flex-col overflow-hidden">
-          <div ref={scrollRef} className="flex-1 overflow-scroll">
-            <div className="p-4 space-y-4 overflow-y-auto">
-              {messages.map((message, index) => (
-                <Message
-                  key={index}
-                  avatarSrc={message.avatarSrc}
-                  avatarFallback={message.avatarFallback}
-                  author={message.author}
-                  text={message.text}
-                />
-              ))}
+          <div className="bg-background/50 backdrop-blur-sm border-l flex flex-col overflow-hidden">
+            <div ref={scrollRef} className="flex-1 overflow-scroll">
+              <div className="p-4 space-y-4 overflow-y-auto">
+                {messages.map((message, index) => (
+                  <Message
+                    key={index}
+                    avatarSrc={message.avatarSrc}
+                    avatarFallback={message.avatarFallback}
+                    author={message.author}
+                    text={message.text}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="bg-background/50 backdrop-blur-sm border-t flex items-center justify-center gap-4 p-4">
+              <Textarea
+                onKeyDown={handleKeyDown}
+                ref={textareaRef}
+                className="flex-1 min-h-[48px] rounded-2xl resize-none p-4 border border-neutral-400 shadow-sm"
+                placeholder="Type your message..."
+              />
+              <Button
+                onClick={sendChatMessage}
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground"
+              >
+                <SendIcon className="w-6 h-6" />
+              </Button>
             </div>
           </div>
-          <div className="bg-background/50 backdrop-blur-sm border-t flex items-center justify-center gap-4 p-4">
-            <Textarea
-              onKeyDown={handleKeyDown}
-              ref={textareaRef}
-              className="flex-1 min-h-[48px] rounded-2xl resize-none p-4 border border-neutral-400 shadow-sm"
-              placeholder="Type your message..."
-            />
-            <Button
-              onClick={sendChatMessage}
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground"
-            >
-              <SendIcon className="w-6 h-6" />
-            </Button>
-          </div>
+        </div>
+        <div className="bg-background/50 backdrop-blur-sm border-t flex items-center justify-center gap-4 p-4">
+          <Controls />
+          <Button
+            onClick={handleVideoClick}
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground"
+          >
+            {video ? (
+              <VideoIcon className="w-6 h-6" />
+            ) : (
+              <VideoIcon stroke="red" className="w-6 h-6" />
+            )}
+          </Button>
         </div>
       </div>
-      <div className="bg-background/50 backdrop-blur-sm border-t flex items-center justify-center gap-4 p-4">
-        <Button
-          onClick={handleMicClick}
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground"
-        >
-          {mic ? (
-            <MicIcon className="w-6 h-6" />
-          ) : (
-            <MicIcon className="w-6 h-6" stroke="red" />
-          )}
-        </Button>
-        <Button
-          onClick={handleVideoClick}
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground"
-        >
-          {video ? (
-            <VideoIcon className="w-6 h-6" />
-          ) : (
-            <VideoIcon stroke="red" className="w-6 h-6" />
-          )}
-        </Button>
-      </div>
-    </div>
     </VoiceProvider>
   );
 }
-
-const MicIcon = (props: any) => {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={props.stroke === "red" ? "red" : "currentColor"}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-      <line x1="12" x2="12" y1="19" y2="22" />
-      {props.stroke === "red" && <line x1="1" y1="1" x2="23" y2="23" />}
-    </svg>
-  );
-};
 
 function SendIcon(props: any) {
   return (
