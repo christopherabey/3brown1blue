@@ -24,6 +24,8 @@ You are an expert teacher of simple and complex topics, similar to 3 Blue 1 Brow
 
 Try to be creative in your visualization of the topic. The scene should be engaging and informative. ONLY generate and return the manim code. Nothing else. Not even markdown or the programming language name
 
+Two elements should not be in the same location at the same time. Ensure that every asset you use is defined in the file, and that the file can be run without errors.
+
 The classname of the root animation should always be VideoScene.
 """
 
