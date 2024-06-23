@@ -1,7 +1,6 @@
 import base64
-import asyncio
 from fastapi import FastAPI, WebSocket
-from hume import HumeStreamClient, StreamSocket
+from hume import HumeStreamClient
 from hume.models.config import FaceConfig
 import os 
 from dotenv import load_dotenv
@@ -28,9 +27,5 @@ async def websocket_endpoint(websocket: WebSocket):
             result = await socket.send_file(frame_data)
             await websocket.send_json(result)
 
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 
