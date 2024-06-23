@@ -1,7 +1,7 @@
 from manim import *
 import uuid
 from client import client
-from logging import logger
+from backend.logger import logger
 import os
 from moviepy.editor import VideoFileClip, concatenate_videoclips
 
@@ -161,13 +161,3 @@ class SceneGenerator:
         
 
         
-
-
-
-
-
-
-
-    
-
-# Example usage
