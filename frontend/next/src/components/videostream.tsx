@@ -3,22 +3,17 @@ import React, { useEffect, useRef, useState } from "react";
 interface VideoStreamProps {
   width: number;
   height: number;
-  emotions: string;
   setEmotions: React.Dispatch<React.SetStateAction<string>>;
 }
 
-const VideoStream: React.FC<VideoStreamProps> = ({
-  width,
-  height,
-  emotions,
-  setEmotions,
-}) => {
+const VideoStream: React.FC<VideoStreamProps> = ({ setEmotions }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isSocketOpen, setIsSocketOpen] = useState<boolean>(false);
 
   useEffect(() => {
     // Open WebSocket connection
+    console.log("Opening WebSocket connection...");
     const ws = new WebSocket("ws://localhost:8000/ws");
 
     ws.onopen = () => {
@@ -77,8 +72,8 @@ const VideoStream: React.FC<VideoStreamProps> = ({
     const captureFrame = () => {
       if (videoRef.current && socket && isSocketOpen) {
         const canvas = document.createElement("canvas");
-        canvas.width = width; // Use width and height props directly
-        canvas.height = height;
+        canvas.width = 300; // Use width and height props directly
+        canvas.height = 200;
         const context = canvas.getContext("2d");
         if (context) {
           context.drawImage(
@@ -99,34 +94,17 @@ const VideoStream: React.FC<VideoStreamProps> = ({
     };
 
     captureFrame();
-  }, [socket, isSocketOpen, width, height]); // Include width and height in dependencies
+  }, [socket, isSocketOpen]); // Include width and height in dependencies
 
   return (
     <div>
       <video
         className="rounded-br-lg rounded-tl-lg"
         ref={videoRef}
-        width={width}
-        height={height}
+        width={300}
+        height={200}
         style={{ transform: "scaleX(-1)" }}
       ></video>
-      {emotions === "" ? (
-        <div></div>
-      ) : (
-        <p
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            color: "white",
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            padding: "5px",
-            margin: "0",
-          }}
-        >
-          {emotions}
-        </p>
-      )}
     </div>
   );
 };

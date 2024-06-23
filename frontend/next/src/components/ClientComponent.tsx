@@ -89,7 +89,7 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
 
   const LoadingComponent = () => {
     return (
-      <div className="w-full h-full flex flex-col p-4 gap-4">
+      <div className="w-full h-full flex flex-col p-4 gap-4 overflow-hidden">
         <div className="flex flex-col gap-4 items-center justify-center">
           {videoID ? (
             <Button onClick={startPlayingVideo} variant="outline">
@@ -107,15 +107,11 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
           </h3>
         </div>
         <div className="w-full flex justify-center align-middle items-center flex-col">
-          <div className="w-full">
+          <div className="w-full flex flex-row max-h-full overflow-scroll">
             <Chat accessToken={accessToken} />
+            <VideoStream width={300} height={200} setEmotions={setEmotions} />
           </div>
-          <VideoStream
-            width={300}
-            height={200}
-            emotions={emotions}
-            setEmotions={setEmotions}
-          />
+
           <Button
             onClick={() => setShowGame((prev) => !prev)}
             variant="outline"
@@ -163,8 +159,8 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
           {starting && (
             <>
               <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-center">
-                Welcome to <span className="text-orange-800">3 Brown</span>{" "}
-                <span className="text-blue-800">1 Blue</span>
+                Welcome to <span className="text-orange-800">3Brown</span>
+                <span className="text-blue-800">1Blue</span>
               </h1>
               <h2 className="text-lg text-center text-muted-foreground">
                 Enter a topic to learn more about it
