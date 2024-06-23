@@ -1,4 +1,3 @@
-# from manim import *
 import dotenv
 dotenv.load_dotenv()
 
@@ -11,6 +10,9 @@ from moviepy.editor import VideoFileClip, concatenate_videoclips, AudioFileClip,
 from moviepy.audio.AudioClip import AudioClip
 from speech import speech_client
 import json
+import asyncio
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor
 
 
 """
@@ -92,7 +94,7 @@ class TranscriptGenerator:
                 messages=messages,
                 temperature=round(iteration/MAX_ITERATIONS, 1) # temperature increase heuristic
             )            
-            output = response.choices[0].message.content.strip("```")
+            output = response.choices[0].message.content.strip().strip('python').strip("```")
 
             logger.info(f"Generated transcript: {output}")
 
@@ -115,11 +117,14 @@ class SceneGenerator:
     :param scene_transcriptions: List of scene transcriptions (strings)
     """
     def __init__(self, scene_transcriptions):
-        self.scene_transcriptions = scene_transcriptions
+        self.scene_transcriptions = {uuid.uuid4(): scene_transcription for scene_transcription in scene_transcriptions}
         self.video_id = str(uuid.uuid4())
 
     def get_scene_path(self, scene_id, video_id):
         return f"{GENERATIONS_PATH}/{video_id}/{scene_id}/{VIDEO_INTERNAL_PATH}"
+    
+    def get_audio_path(self, scene_id, video_id):
+        return f"{GENERATIONS_PATH}/{video_id}/{scene_id}/audio.wav"
         
     def render_scene(self, scene_id):
         """
@@ -152,23 +157,91 @@ class SceneGenerator:
             return False, str(e)
         
 
-        
-    async def add_audio_to_scene(self, scene_id, scene_transcription, video_id):
+    async def generate_speech(self, scene_id, video_id):
         """
-        Adds audio to the scene with the given scene id
+        Generates speech for the scene with the given scene id
         :param scene_id: Scene id (string)
-        :param scene_transcription: Transcription text for TTS (string)
+        :param video_id: Video id (string)
         """
-
-        # Step 1: Create audio with tts api
+        scene_transcription = self.scene_transcriptions[scene_id]
         synthesis = await speech_client.synthesize(scene_transcription, voice='lily', format='wav')
-        scene_path = self.get_scene_path(scene_id, video_id) # mp4 file path
-
         audio_path = f"{GENERATIONS_PATH}/{video_id}/{scene_id}/audio.wav"
-
-        # Save the synthesized audio
         with open(audio_path, 'wb') as audio_file:
             audio_file.write(synthesis['audio'])
+        
+        logger.info(f"Successfully generated speech for scene {scene_id}")
+        return scene_id
+        
+            
+
+    def generate_manim(self, scene_id):
+        """
+        Generates manim code from the scene description
+        :param scene_description: Scene description (string)
+        :return: scene_id (string)
+        """
+        iteration = 0
+        scene_transcription = self.scene_transcriptions[scene_id]
+        messages = [{
+            "role": "system", "content": SYSTEM_SCENE_PROMPT
+        }, {
+            "role": "user", "content": scene_transcription
+        }]
+
+        while iteration < MAX_ITERATIONS:
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages
+            )
+            logger.info(f"Generated response: {response}")
+            
+            # get output from last message
+            output = response.choices[0].message.content
+
+            # strip code block markdown
+            output = output.strip("```")
+
+            logger.info(f"Generated code: {output}")
+
+            # append output to messages
+            messages.append({"role": "assistant", "content": output})
+
+            # put code in a file
+            try:
+                if not os.path.exists(f"{GENERATIONS_PATH}/{self.video_id}/{scene_id}"):
+                    os.makedirs(f"{GENERATIONS_PATH}/{self.video_id}/{scene_id}")
+                with open(f"{GENERATIONS_PATH}/{self.video_id}/{scene_id}/video.py", "w") as f:
+                    f.write(output)
+            except Exception as e:
+                logger.error(f"Error writing to file: {e}")
+                return None
+
+            render_output = self.render_scene(scene_id)
+
+            logger.info(f"Status for scene {scene_id}: {render_output}")
+
+            # note render_output is either True or (False, string)
+            if render_output[0]:
+                logger.info(f"Scene {scene_id} was rendered successfully")
+                return scene_id
+            
+            # scene was not rendered successfully
+            # add error message to messages
+            messages.append({"role": "user", "content": f"Error: {render_output[1]}"})
+            iteration += 1
+            
+        # scene was not rendered successfully after MAX_ITERATIONS
+        return None
+    
+    def combine_manim_and_speech(self, scene_id, video_id):
+        """
+        Combines the manim code and speech synthesis for the scene with the given scene id
+        :param scene_id: Scene id (string)
+        :param manim_result: Manim code (string)
+        :param speech_result: Speech synthesis (string)
+        """
+        scene_path = self.get_scene_path(scene_id, video_id)
+        audio_path = self.get_audio_path(scene_id, video_id)
 
         video = VideoFileClip(scene_path)
         audio = AudioFileClip(audio_path)
@@ -214,87 +287,15 @@ class SceneGenerator:
         final_clip.close()
 
         logger.info(f"Successfully added audio to scene {scene_id}")
-            
 
-    async def generate_scene(self, scene_transcription):
+    def combine_video_scenes(self):
         """
-        Generates manim code from the scene description
-        :param scene_description: Scene description (string)
-        :return: scene_id (string)
-        """
-        iteration = 0
-        messages = [{
-            "role": "system", "content": SYSTEM_SCENE_PROMPT
-        }, {
-            "role": "user", "content": scene_transcription
-        }]
-
-        # create scene id
-        scene_id = str(uuid.uuid4())
-
-        while iteration < MAX_ITERATIONS:
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                messages=messages
-            )
-            logger.info(f"Generated response: {response}")
-            
-            # get output from last message
-            output = response.choices[0].message.content
-
-            # strip code block markdown
-            output = output.strip("```")
-
-            logger.info(f"Generated code: {output}")
-
-            # append output to messages
-            messages.append({"role": "assistant", "content": output})
-
-            # put code in a file
-            try:
-                if not os.path.exists(f"{GENERATIONS_PATH}/{self.video_id}/{scene_id}"):
-                    os.makedirs(f"{GENERATIONS_PATH}/{self.video_id}/{scene_id}")
-                with open(f"{GENERATIONS_PATH}/{self.video_id}/{scene_id}/video.py", "w") as f:
-                    f.write(output)
-            except Exception as e:
-                logger.error(f"Error writing to file: {e}")
-                return None
-
-            render_output = self.render_scene(scene_id)
-
-            logger.info(f"Status for scene {scene_id}: {render_output}")
-
-            # note render_output is either True or (False, string)
-            if render_output[0]:
-                logger.info(f"Scene {scene_id} was rendered successfully")
-
-                # add audio to scene
-                await self.add_audio_to_scene(scene_id, scene_transcription, self.video_id)
-                return scene_id
-            
-            # scene was not rendered successfully
-            # add error message to messages
-            messages.append({"role": "user", "content": f"Error: {render_output[1]}"})
-            iteration += 1
-            
-        # scene was not rendered successfully after MAX_ITERATIONS
-        return None
-    
-
-    async def generate_all_scenes(self):
-        """
-        Generates manim code for all scenes and stitches them together into a single video.
-        :return: Path to the final stitched video.
+        Combines all the video scenes into a single video
         """
         scene_ids = []
         video_clips = []
 
-        for scene_transcription in self.scene_transcriptions:
-            scene_id = await self.generate_scene(scene_transcription)
-            if scene_id is None:
-                logger.error(f"Scene could not be generated for: {scene_transcription}")
-                continue
-
+        for scene_id in self.scene_transcriptions.keys():
             scene_path = self.get_scene_path(scene_id, self.video_id)
             if os.path.exists(scene_path):
                 video_clips.append(VideoFileClip(scene_path))
@@ -312,6 +313,33 @@ class SceneGenerator:
 
         logger.info(f"Final video path: {final_video_path}")
         return final_video_path
+
+    async def generate_all_scenes(self):
+        """
+        Generates manim code for all scenes and stitches them together into a single video.
+        :return: Path to the final stitched video.
+        """
+        with ProcessPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+            loop = asyncio.get_running_loop()
+            tasks = []
+            for scene_id in self.scene_transcriptions.keys():
+                # Use run_in_executor for potentially CPU-bound tasks
+                manim_task = loop.run_in_executor(executor, self.generate_manim, scene_id)
+                speech_task = loop.run_in_executor(executor, self.generate_speech, scene_id, self.video_id)
+                tasks.append((manim_task, speech_task, scene_id))
+
+                # Wait for all tasks to complete
+            results = await asyncio.gather(*(asyncio.gather(*task_pair[:2]) for task_pair in tasks))
+        
+            logger.info(f"Results: {results}")
+
+            for (manim_result, speech_result), scene_id in zip(results, self.scene_transcriptions.keys()):
+                if manim_result is None or speech_result is None:
+                    logger.error(f"Scene {scene_id} was not generated successfully")
+                    continue
+                self.combine_manim_and_speech(scene_id, self.video_id)
+
+            self.combine_video_scenes()
         
 
         
