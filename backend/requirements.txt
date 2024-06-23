@@ -1,2 +1,5 @@
 fastapi
 uvicorn
+asyncio
+python-dotenv
+hume[stream]
