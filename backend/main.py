@@ -1,11 +1,12 @@
 import base64
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from hume import HumeStreamClient
-from hume.models.config import FaceConfig
+from hume.models.config import FaceConfig, LanguageConfig
 import os 
 from dotenv import load_dotenv
 import tempfile
 import time
+import sys
 
 load_dotenv()
 
@@ -59,13 +60,15 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     client = HumeStreamClient(api_key=os.getenv("HUME_API_KEY"))
     # config = FaceConfig(identify_faces=True)
+    config = LanguageConfig()
     
-    async with client.connect() as socket:
+    async with client.connect([config]) as socket:
         try:
             while True:
-                data = await websocket.receive_text()
-                print(data)
-                frame_data = base64.b64decode(data.split(",")[1])
+                # data = await websocket.receive_text()
+                image_bytes = await websocket.receive_text()    
+                print(image_bytes)
+                frame_data = base64.b64decode(image_bytes.split(",")[1])
                 
                 # Save frame data to a temporary file
                 with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
@@ -80,7 +83,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     os.remove(tmp_file_path)
                     time.sleep(0.1)
 
-        except WebSocketDisconnect:
+        except WebSocketDisconnect as e:
             print("WebSocket connection closed")
+            print(f"Error: {e}", sys.exc_info())
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"Error: {e}", sys.exc_info())
