@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "./ui/input";
 import { ChevronDown, PlayIcon, SendIcon } from "lucide-react";
 import { Chat } from "./Chat";
+import { useVoice } from "@humeai/voice-react";
 
 interface Message {
   avatarSrc: string;
@@ -30,6 +31,7 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
   const { setTheme } = useTheme();
   const [starting, setStarting] = useState<boolean>(true);
   const [showGame, setShowGame] = useState<boolean>(false);
+  // const { connect } = useVoice();
 
   function generateVideo() {
     setStarting(false);
@@ -139,12 +141,12 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
             />
           </div>
         )}
-        {/* <VideoStream
+        <VideoStream
           width={300}
           height={200}
           emotions={emotions}
           setEmotions={setEmotions}
-        /> */}
+        />
         <div
           className={cn(
             "flex flex-col w-[80%] absolute  gap-4 transition-all ease-in-out h-full py-12",
