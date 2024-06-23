@@ -102,7 +102,7 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
           </h3>
         </div>
         <div className="w-full flex justify-center align-middle items-center flex-col">
-          <div className="mx-auto bg-black">
+          <div className="w-full">
             <Chat accessToken={accessToken} />
           </div>
           <Button
