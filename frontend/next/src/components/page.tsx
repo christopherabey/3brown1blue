@@ -5,9 +5,10 @@ import { Textarea } from "@/components/ui/textarea";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import Message from "@/components/ui/message";
+import VideoStream from "./videostream";
 
 // Dynamically import the Webcam component for client-side rendering
-const Webcam = dynamic(() => import("@/components/webcam"), { ssr: false });
+// const Webcam = dynamic(() => import("@/components/webcam"), { ssr: false });
 
 interface Message {
   avatarSrc: string;
@@ -109,7 +110,8 @@ export function Page() {
         <Button variant="ghost" size="icon" className="text-muted-foreground">
           <VideoIcon className="w-6 h-6" />
         </Button>
-        <Webcam />
+        <VideoStream />
+        {/* <Webcam /> */}
       </div>
     </div>
   );
