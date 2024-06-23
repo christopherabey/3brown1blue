@@ -1,55 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
 
 interface VideoStreamProps {
-  width: number;
-  height: number;
-  setEmotions: React.Dispatch<React.SetStateAction<string>>;
+  emotions: string;
+  socket: WebSocket | null;
+  isSocketOpen: boolean;
 }
 
-const VideoStream: React.FC<VideoStreamProps> = ({ setEmotions }) => {
+const VideoStream: React.FC<VideoStreamProps> = ({
+  emotions,
+  socket,
+  isSocketOpen,
+}) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [socket, setSocket] = useState<WebSocket | null>(null);
-  const [isSocketOpen, setIsSocketOpen] = useState<boolean>(false);
-
-  useEffect(() => {
-    // Open WebSocket connection
-    console.log("Opening WebSocket connection...");
-    const ws = new WebSocket("ws://localhost:8000/ws");
-
-    ws.onopen = () => {
-      setIsSocketOpen(true);
-      setSocket(ws);
-    };
-
-    ws.onmessage = (event) => {
-      const result = JSON.parse(event.data);
-
-      if (result?.face?.predictions) {
-        setEmotions(
-          result.face.predictions[0]?.emotions
-            ?.sort((a: any, b: any) => b.score - a.score)
-            .slice(0, 3)
-            .map((emotion: any) => emotion.name)
-            .join(", ")
-        );
-      } else {
-        setEmotions("");
-      }
-    };
-
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
-
-    ws.onclose = () => {
-      console.log("WebSocket connection closed");
-      setIsSocketOpen(false);
-    };
-
-    return () => {
-      ws.close();
-    };
-  }, []);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -98,6 +60,19 @@ const VideoStream: React.FC<VideoStreamProps> = ({ setEmotions }) => {
 
   return (
     <div>
+      <p
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          color: "white",
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+          padding: "5px",
+          margin: "0",
+        }}
+      >
+        {emotions}
+      </p>
       <video
         className="rounded-br-lg rounded-tl-lg"
         ref={videoRef}

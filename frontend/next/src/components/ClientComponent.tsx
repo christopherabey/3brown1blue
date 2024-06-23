@@ -22,22 +22,60 @@ interface Message {
 }
 
 export function ClientComponent({ accessToken }: { accessToken: string }) {
-  const [messages, setMessages] = useState<Message[]>([]);
   const textareaRef: RefObject<HTMLInputElement> = useRef(null);
   const [videoID, setVideoID] = useState<string>("");
   const [emotions, setEmotions] = useState<string>(""); // string of comma-separated emotions
   const [videoPlaying, setVideoPlaying] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
-  const { setTheme } = useTheme();
   const [starting, setStarting] = useState<boolean>(true);
   const [showGame, setShowGame] = useState<boolean>(false);
-  const { disconnect } = useVoice();
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [isSocketOpen, setIsSocketOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Open WebSocket connection
+    console.log("Opening WebSocket connection...");
+    const ws = new WebSocket("ws://localhost:8000/ws");
+
+    ws.onopen = () => {
+      setIsSocketOpen(true);
+      setSocket(ws);
+    };
+
+    ws.onmessage = (event) => {
+      const result = JSON.parse(event.data);
+
+      if (result?.face?.predictions) {
+        setEmotions(
+          result.face.predictions[0]?.emotions
+            ?.sort((a: any, b: any) => b.score - a.score)
+            .slice(0, 3)
+            .map((emotion: any) => emotion.name)
+            .join(", ")
+        );
+      } else {
+        setEmotions("");
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    ws.onclose = () => {
+      console.log("WebSocket connection closed");
+      setIsSocketOpen(false);
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
 
   function generateVideo() {
     setStarting(false);
     setVideoPlaying(false);
     setVideoID("");
-    disconnect();
     const textarea = textareaRef.current;
 
     if (textarea) {
@@ -88,6 +126,7 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
   };
 
   const LoadingComponent = () => {
+    console.log("rendering loading component");
     return (
       <div className="w-full h-full flex flex-col p-4 gap-4 overflow-hidden">
         <div className="flex flex-col gap-4 items-center justify-center">
@@ -109,7 +148,11 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
         <div className="w-full flex justify-center align-middle items-center flex-col">
           <div className="w-full flex flex-row max-h-full overflow-scroll">
             <Chat accessToken={accessToken} />
-            <VideoStream width={300} height={200} setEmotions={setEmotions} />
+            <VideoStream
+              socket={socket}
+              emotions={emotions}
+              isSocketOpen={isSocketOpen}
+            />
           </div>
 
           <Button

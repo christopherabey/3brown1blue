@@ -26,9 +26,9 @@ export function Chat({ accessToken }: { accessToken: string }) {
     }
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  // useEffect(() => {
+  //   scrollToBottom();
+  // }, [messages]);
 
   return (
     <>
