@@ -1,7 +1,7 @@
 from manim import *
 import uuid
 from client import client
-from backend.logger import logger
+from logger import logger
 import os
 from moviepy.editor import VideoFileClip, concatenate_videoclips
 
@@ -68,7 +68,7 @@ class SceneGenerator:
         # Step 3: Profit
         
 
-    def generate_scene(self, scene_description):
+    def generate_scene(self, scene_transcription):
         """
         Generates manim code from the scene description
         :param scene_description: Scene description (string)
@@ -78,7 +78,7 @@ class SceneGenerator:
         messages = [{
             "role": "system", "content": SYSTEM_SCENE_PROMPT
         }, {
-            "role": "user", "content": scene_description
+            "role": "user", "content": scene_transcription
         }]
 
         # create scene id
@@ -97,12 +97,15 @@ class SceneGenerator:
             # strip code block markdown
             output = output.strip("```")
 
+            logger.info(f"Generated code: {output}")
+
             # append output to messages
             messages.append({"role": "assistant", "content": output})
 
             # put code in a file
             try:
-                with open(f"{GENERATIONS_PATH}/{scene_id}/video.py", "w") as f:
+                os.makedirs(f"{GENERATIONS_PATH}/{self.video_id}/{scene_id}")
+                with open(f"{GENERATIONS_PATH}/{self.video_id}/{scene_id}/video.py", "w") as f:
                     f.write(output)
             except Exception as e:
                 logger.error(f"Error writing to file: {e}")
@@ -157,6 +160,7 @@ class SceneGenerator:
         final_video_path = f"{GENERATIONS_PATH}/{self.video_id}/final_video.mp4"
         final_video.write_videofile(final_video_path, codec="libx264")
 
+        logger.info(f"Final video path: {final_video_path}")
         return final_video_path
         
 
