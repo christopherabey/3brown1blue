@@ -8,5 +8,6 @@ moviepy
 openai
 pydub
 pydantic
+anthropic
 lmnt
 groq

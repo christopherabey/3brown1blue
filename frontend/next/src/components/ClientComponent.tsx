@@ -3,15 +3,13 @@
 import React, { useState, useRef, RefObject, useEffect, useMemo } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import Message from "@/components/ui/message";
 import VideoStream from "@/components/videostream"; // Adjust the path as per your file structure
-import { VoiceProvider } from "@humeai/voice-react";
-import Controls from "./Controls";
-import Messages from "./Messages";
 import { Progress } from "./ui/progress";
 import { LoadingSpinner } from "./ui/LoadingSpinner";
 import { useTheme } from "next-themes";
 
+export function ClientComponent() {
+  const [video, setVideo] = useState<boolean>(false);
 interface Message {
   avatarSrc: string;
   avatarFallback: string;
@@ -24,7 +22,6 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const textareaRef: RefObject<HTMLTextAreaElement> = useRef(null);
   const [videoID, setVideoID] = useState<string>("");
-  const scrollRef = useRef<HTMLDivElement>(null);
   const [emotions, setEmotions] = useState<string>(""); // string of comma-separated emotions
   const [progress, setProgress] = useState<number | null>(null);
   const progressInterval = useRef<NodeJS.Timeout | null>(null);
