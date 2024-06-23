@@ -70,7 +70,7 @@ async def websocket_endpoint(websocket: WebSocket):
     config = FaceConfig(identify_faces=True)
     
     async with client.connect([config]) as socket:
-        time.sleep(5) # wait for the socket to connect
+        time.sleep(3) # wait for the socket to connect
         try:
             while True:
                 data = await websocket.receive_text()
