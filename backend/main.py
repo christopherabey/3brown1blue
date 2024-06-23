@@ -8,21 +8,33 @@ from dotenv import load_dotenv
 import tempfile
 import time
 import sys
+from pydantic import BaseModel
+from transcript_generator import TranscriptGenerator
+from scene_generator import SceneGenerator
 
 load_dotenv()
 
 app = FastAPI()
+
+class VideoRequest(BaseModel):
+    text: str
 
 @app.get("/")
 def read_root():
     return {"message": "Hello world"}
 
 @app.get("/generate")
-async def generate():
+async def generate(request: VideoRequest):
     """
     Takes in a topic and returns a video id for the generated video
     """
-    return {"message": "Generating scenes"}
+    text = request.text
+    transcript_generator = TranscriptGenerator()
+    transcriptions = await transcript_generator.generate_transcript(text)
+    scene_generator = SceneGenerator(transcriptions)
+    video_id = await scene_generator.generate_scenes()
+
+    return {"video_id": video_id, "text": "\n".join(transcriptions)}
 
 @app.get("/videos/{video_id}")
 async def get_video(video_id: str):

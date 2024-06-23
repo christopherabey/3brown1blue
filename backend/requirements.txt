@@ -7,3 +7,4 @@ manim
 moviepy
 openai
 pydub
+pydantic
