@@ -20,6 +20,7 @@ export function Page() {
   const [mic, setMic] = useState<boolean>(false);
   const textareaRef: RefObject<HTMLTextAreaElement> = useRef(null);
   const [videoID, setVideoID] = useState<string>("");
+  const [emotions, setEmotions] = useState<string>(""); // string of comma-separated emotions
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -74,7 +75,7 @@ export function Page() {
 
       textarea.value = "";
 
-      return
+      return;
 
       // Make a fetch request to the backend
       fetch("http://localhost:8000/generate/", {
@@ -82,11 +83,11 @@ export function Page() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text: messageText }),
+        body: JSON.stringify({ text: messageText, emotions: emotions }),
       })
         .then((response) => {
           if (!response.ok) {
-            throw new Error('Network response was not ok');
+            throw new Error("Network response was not ok");
           }
           return response.json(); // or .text() or .blob() depending on your response type
         })
@@ -106,12 +107,10 @@ export function Page() {
               side: "receiver",
             },
           ]);
-
-          
         })
         .catch((error) => {
           // Handle errors
-          console.error('Fetch error:', error);
+          console.error("Fetch error:", error);
         });
     }
   }
@@ -122,18 +121,29 @@ export function Page() {
         <div className="relative">
           <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm grid grid-cols-1 gap-2 p-4">
             <div className="rounded-xl">
-              {videoID ? <video
-                className="w-full h-full object-cover"
-                src={`http://localhost:8000/videos/${videoID}`}
-                controls
-              /> : <video
-              className="w-full h-full object-cover"
-              src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-              controls
-            />}
+              {videoID ? (
+                <video
+                  className="w-full h-full object-cover"
+                  src={`http://localhost:8000/videos/${videoID}`}
+                  controls
+                />
+              ) : (
+                <video
+                  className="w-full h-full object-cover"
+                  src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                  controls
+                />
+              )}
               {/* Overlay VideoStream component in the top right corner */}
               <div className="absolute top-4 right-4 z-10">
-                {video && <VideoStream width={200} height={150} />}
+                {video && (
+                  <VideoStream
+                    width={200}
+                    height={150}
+                    emotions={emotions}
+                    setEmotions={setEmotions}
+                  />
+                )}
               </div>
             </div>
           </div>

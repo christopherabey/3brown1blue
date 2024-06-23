@@ -32,6 +32,7 @@ app.add_middleware(
 
 class VideoRequest(BaseModel):
     text: str
+    emotions: str # comma separated list of emotions (max 3)
 
 @app.get("/")
 def read_root():
@@ -44,7 +45,7 @@ async def generate(request: VideoRequest):
     """
     text = request.text
     transcript_generator = TranscriptGenerator()
-    transcriptions = await transcript_generator.generate_transcript(text)
+    transcriptions = await transcript_generator.generate_transcript(text, emotions=request.emotions)
     scene_generator = SceneGenerator(transcriptions)
     video_id = await scene_generator.generate_all_scenes()
 

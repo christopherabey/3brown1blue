@@ -7,24 +7,6 @@ import json
 import asyncio
 import os
 
-SYSTEM_TRANSCRIPTION_PROMPT = """
-You are an expert teacher, similar to 3 Blue 1 Brown. Given a user's question about a topic, you are to generate a transcript for a video that will explain the topic. Really prioritize giving a fundamental understanding of the concept rather than a high level overview. And give it as if you are a fond teacher with an empathetic tone. They way you deliver this knowledge directly impacts how our kids will grow up to be.
-
-Animations will be generated for your content as well, so feel free to reference "the screen" and talk as if there is something relevant to what you are saying on the screen.
-
-If needed, you should chunk it up into multiple scenes, in a logical order to best explain the topic. The transcript should be engaging and informative, and you should not have more than 5 scenes.
-
-ONLY Generate an array of strings, where each string is a scene transcription. START and END the array with square brackets. Each element in the array should be a string surrounded by double quotes. Do not include the programming language name or any markdown.
-
-Format example:
-
-[
-    "This is the first scene",
-    "This is the second scene",
-    ...
-]
-"""
-
 MAX_ITERATIONS = 5
 
 class TranscriptGenerator:
@@ -44,9 +26,26 @@ class TranscriptGenerator:
         self.scene_transcriptions = list(json.loads(transcriptions_split_right))
         return
 
+    def generate_emotion_system_prompt(self, emotions):
+        return f"""
+You are an expert teacher, similar to 3 Blue 1 Brown. Given a user's question about a topic, you are to generate a transcript for a video that will explain the topic. Really prioritize giving a fundamental understanding of the concept rather than a high level overview. And give it as if you are a fond teacher with an empathetic tone. They way you deliver this knowledge directly impacts how our kids will grow up to be. Right now, the student is feeling {emotions} so make sure to consider that in your explanation.
 
+Animations will be generated for your content as well, so feel free to reference "the screen" and talk as if there is something relevant to what you are saying on the screen.
 
-    async def generate_transcript(self, user_topic):
+If needed, you should chunk it up into multiple scenes, in a logical order to best explain the topic. The transcript should be engaging and informative, and you should not have more than 5 scenes.
+
+ONLY Generate an array of strings, where each string is a scene transcription. START and END the array with square brackets. Each element in the array should be a string surrounded by double quotes. Do not include the programming language name or any markdown.
+
+Format example:
+
+[
+    "This is the first scene",
+    "This is the second scene",
+    ...
+]
+"""
+
+    async def generate_transcript(self, user_topic, emotions):
         """
         Generates the transcript for the user topic
         :return: List of scene transcriptions (strings)
