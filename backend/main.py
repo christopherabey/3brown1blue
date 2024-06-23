@@ -51,6 +51,13 @@ async def generate(request: VideoRequest):
 
     return {"video_id": video_id, "text": "\n".join(transcriptions)}
 
+@app.post("/generate_stub")
+async def generate_stub(request: VideoRequest):
+    """
+    Takes in a topic and returns a video id for the generated video
+    """
+    return {"video_id": "0dc1c87d-f027-43be-b443-2d573b03ab7a", "text": "This is a stub"}
+
 @app.get("/videos/{video_id}")
 async def get_video(video_id: str):
     """

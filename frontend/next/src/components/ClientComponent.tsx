@@ -7,9 +7,10 @@ import VideoStream from "@/components/videostream"; // Adjust the path as per yo
 import { Progress } from "./ui/progress";
 import { LoadingSpinner } from "./ui/LoadingSpinner";
 import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
+import { Input } from "./ui/input";
+import { ChevronDown, PlayIcon, SendIcon } from "lucide-react";
 
-export function ClientComponent() {
-  const [video, setVideo] = useState<boolean>(false);
 interface Message {
   avatarSrc: string;
   avatarFallback: string;
@@ -20,32 +21,17 @@ interface Message {
 
 export function ClientComponent({ accessToken }: { accessToken: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const textareaRef: RefObject<HTMLTextAreaElement> = useRef(null);
+  const textareaRef: RefObject<HTMLInputElement> = useRef(null);
   const [videoID, setVideoID] = useState<string>("");
   const [emotions, setEmotions] = useState<string>(""); // string of comma-separated emotions
-  const [progress, setProgress] = useState<number | null>(null);
-  const progressInterval = useRef<NodeJS.Timeout | null>(null);
+  const [videoPlaying, setVideoPlaying] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const { setTheme } = useTheme();
+  const [starting, setStarting] = useState<boolean>(true);
+  const [showGame, setShowGame] = useState<boolean>(false);
 
-  const scrollToBottom = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      sendChatMessage();
-    }
-  }
-
-  function sendChatMessage() {
+  function generateVideo() {
+    setStarting(false);
     const textarea = textareaRef.current;
 
     if (textarea) {
@@ -58,26 +44,13 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
       // Send the chat message
       console.log("Sending chat message..." + messageText);
 
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        {
-          avatarSrc: "/placeholder-user.jpg",
-          avatarFallback: "OA",
-          author: "You",
-          text: messageText,
-          side: "user",
-        },
-      ]);
-
       textarea.value = "";
 
       setLoading(true);
       // setTheme("dark");
 
-      return;
-
       // Make a fetch request to the backend
-      fetch("http://localhost:8000/generate/", {
+      fetch("http://localhost:8000/generate_stub/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -94,19 +67,6 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
           // Handle the data received from the backend
           console.log(data);
           setVideoID(data.video_id);
-
-          setMessages((prevMessages) => [
-            ...prevMessages,
-            {
-              avatarSrc: "/placeholder-user.jpg",
-              avatarFallback: "OA",
-              author: "3Blue1Brown",
-              text: data.text,
-              side: "receiver",
-            },
-          ]);
-
-          setLoading(false);
         })
         .catch((error) => {
           // Handle errors
@@ -116,105 +76,128 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
     }
   }
 
-  return (
-    <VoiceProvider auth={{ type: "accessToken", value: accessToken }}>
-      <Messages />
-      <div className="flex flex-col h-screen">
-        <div className="flex-1 relative grid grid-cols-[1fr_300px] overflow-hidden">
-          <div className="relative">
-            <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm grid grid-cols-1 gap-2 p-4">
-              <div className="rounded-xl">
-                {loading && (
-                  <div className="w-full h-full p-4 flex flex-col justify-center items-center align-middle">
-                    <div className="text-muted-foreground flex flex-row gap-2">
-                      <LoadingSpinner />
-                      Loading. This will take a minute...
-                    </div>
-                    <iframe
-                      src="dinosaur_game.html"
-                      className="w-full h-80 my-8"
-                    />
-                  </div>
-                )}
-                {!loading && videoID && (
-                  <video
-                    className="w-full h-full object-cover"
-                    src={`http://localhost:8000/videos/${videoID}`}
-                    controls
-                    autoPlay
-                  />
-                )}
+  const startPlayingVideo = () => {
+    setVideoPlaying(true);
+    setLoading(false);
+  };
 
-                {/* Overlay VideoStream component in the top right corner */}
-                <div className="absolute top-4 right-4 z-10">
-                  <VideoStream
-                    width={300}
-                    height={200}
-                    emotions={emotions}
-                    setEmotions={setEmotions}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="bg-background/50 backdrop-blur-sm border-l flex flex-col overflow-hidden">
-            <div ref={scrollRef} className="flex-1 overflow-scroll">
-              <div className="p-4 space-y-4 overflow-y-auto">
-                {messages.map((message, index) => (
-                  <Message
-                    key={index}
-                    avatarSrc={message.avatarSrc}
-                    avatarFallback={message.avatarFallback}
-                    author={message.author}
-                    text={message.text}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="bg-background/50 backdrop-blur-sm border-t flex items-center justify-center gap-4 p-4">
-              <Textarea
-                onKeyDown={handleKeyDown}
-                ref={textareaRef}
-                className="flex-1 min-h-[48px] rounded-2xl resize-none p-4 border border-neutral-400 shadow-sm"
-                placeholder="Type your message..."
-              />
-              <Button
-                onClick={sendChatMessage}
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground"
-              >
-                <SendIcon className="w-6 h-6" />
-              </Button>
-            </div>
-          </div>
+  const LoadingComponent = () => {
+    return (
+      <div className="w-full h-full flex flex-col p-4 gap-4">
+        <div className="flex flex-col gap-4 items-center justify-center">
+          {videoID ? (
+            <Button onClick={startPlayingVideo} variant="outline">
+              <VideoIcon className="w-6 h-6 mr-2" />
+              Watch the explainer video
+            </Button>
+          ) : (
+            <h2 className="text-4xl font-bold text-center text-gray-800 flex flex-row items-center justify-center gap-4">
+              <LoadingSpinner />
+              {" Generating video. This might take a while..."}
+            </h2>
+          )}
+          <h3 className="text-2xl font-semibold text-center text-orange-600 flex flex-row items-center justify-center gap-4">
+            In the meantime, how's your day going?
+          </h3>
         </div>
-        <div className="bg-background/50 backdrop-blur-sm border-t flex items-center justify-center gap-4 p-4">
-          <Controls />
+        <div className="w-full flex justify-center align-middle items-center flex-col">
+          <Button
+            onClick={() => setShowGame((prev) => !prev)}
+            variant="outline"
+          >
+            {showGame ? (
+              <ChevronDown className="w-4 h-4 mr-2" />
+            ) : (
+              <PlayIcon className="w-4 h-4 mr-2" />
+            )}
+            Or play a game
+          </Button>
+          {showGame && (
+            <div className="animate-fade-in w-full">
+              <iframe src="dinosaur_game.html" className="w-full h-80 my-8" />
+            </div>
+          )}
         </div>
       </div>
-    </VoiceProvider>
-  );
-}
+    );
+  };
 
-function SendIcon(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m22 2-7 20-4-9-9-4Z" />
-      <path d="M22 2 11 13" />
-    </svg>
-  );
+  const StartingComponent = () => {
+    return (
+      <div className="w-full h-full flex relative items-center align-middle justify-center">
+        {videoPlaying && videoID && (
+          <div className="w-full h-full flex flex-col items-center justify-center object-cover">
+            <video
+              src={`http://localhost:8000/videos/${videoID}/`}
+              className="w-full h-full"
+              controls
+              autoPlay
+            />
+          </div>
+        )}
+        {/* <VideoStream
+          width={300}
+          height={200}
+          emotions={emotions}
+          setEmotions={setEmotions}
+        /> */}
+        <div
+          className={cn(
+            "flex flex-col w-[80%] absolute  gap-4 transition-all ease-in-out h-full py-12",
+            {
+              "top-1/3 left-1/2 transform -translate-x-1/2": starting,
+              "bottom-8 left-auto right-auto": !starting,
+            }
+          )}
+        >
+          {starting && (
+            <>
+              <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-center">
+                Welcome to <span className="text-orange-800">3 Brown</span>{" "}
+                <span className="text-blue-800">1 Blue</span>
+              </h1>
+              <h2 className="text-lg text-center text-muted-foreground">
+                Enter a topic to learn more about it
+              </h2>
+            </>
+          )}
+
+          {loading && <LoadingComponent />}
+
+          <div className="flex flex-row gap-2 items-center align-middle justify-center mt-8">
+            <Input
+              disabled={loading}
+              ref={textareaRef}
+              type="text"
+              className={cn(
+                "w-full h-12 px-4 py-2 border border-gray-300 rounded-md  shadow-md text-xl text-foreground font-semibold"
+              )}
+              placeholder="Let's learn!"
+              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  generateVideo();
+                }
+              }}
+            />
+            <Button
+              onClick={generateVideo}
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground"
+              style={{
+                transform: "translateX(-55px)",
+              }}
+            >
+              <SendIcon className="w-6 h-6" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return StartingComponent();
 }
 
 const VideoIcon = (props: any) => {
