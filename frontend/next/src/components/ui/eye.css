@@ -1,24 +1,25 @@
 .eye-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+    padding: 20px;
 }
 
 .eye {
-  width: 200px;
-  height: 200px;
+  width: 80px;
+  height: 80px;
   background: url('./3b1b.png') no-repeat center center / contain;
   border-radius: 50%;
   position: relative;
   animation: pulse 2s infinite;
-  box-shadow: 0 0 30px 20px rgba(255, 255, 0, 0.7);
+  box-shadow: 0 0 20px 10px rgba(255, 255, 0, 0.7);
 
 }
 
 .pupil {
-  width: 50px;
-  height: 50px;
+  width: 30px;
+  height: 30px;
   background: black;
   border-radius: 50%;
   position: absolute;
