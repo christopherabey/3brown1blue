@@ -3,6 +3,7 @@ import uuid
 from client import client
 from logger import logger
 import os
+import subprocess
 from moviepy.editor import VideoFileClip, concatenate_videoclips
 
 
@@ -21,14 +22,13 @@ MAX_ITERATIONS = 5
 SYSTEM_SCENE_PROMPT = """
 You are an expert teacher of simple and complex topics, similar to 3 Blue 1 Brown. Given a transcription for a video scene, you are to generate Manim code that will create an animation for the scene. The code should be able to run without errors.
 
-Try to be creative in your visualization of the topic. The scene should be engaging and informative. ONLY generate and return the manim code. Nothing else.
+Try to be creative in your visualization of the topic. The scene should be engaging and informative. ONLY generate and return the manim code. Nothing else. Not even markdown or the programming language name
 
 The classname of the root animation should always be VideoScene.
 """
 
 # 480p15 is the resolution and frame rate of the video, change if we want to change the resolution
-VIDEO_INTERNAL_PATH = "media/videos/video/480p15/VideoScene.mp4"
-
+VIDEO_INTERNAL_PATH = "videos/video/480p15/video.mp4"
 
 class SceneGenerator:
     """
@@ -45,13 +45,28 @@ class SceneGenerator:
         :param scene_id: Scene id (string)
         :return: true if the scene was rendered successfully, false otherwise, including the error message (bool, string)
         """
+        command = f"manim render -ql {GENERATIONS_PATH}/{self.video_id}/{scene_id}/video.py -o video --media_dir {GENERATIONS_PATH}/{self.video_id}/{scene_id}"
+        
+        print(f"Running command: {command}")
+
         try:
-            # render scene
-            # -ql flag is used to render the scene in low quality
-            # can add -p to open the scene in preview window
-            os.system(f"manim -ql {GENERATIONS_PATH}/{self.video_id}/{scene_id}/video.py VideoScene")
+            # Use subprocess.run instead of os.system
+            result = subprocess.run(
+                command,
+                shell=True,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            logger.info(f"Command output: {result.stdout}")
             return True, ""
+        except subprocess.CalledProcessError as e:
+            # Capture the error output
+            error_message = e.stderr.strip()
+            return False, f"Command failed with exit code {e.returncode}. Error: {error_message}"
         except Exception as e:
+            # Catch any other exceptions
             return False, str(e)
         
 
@@ -104,7 +119,8 @@ class SceneGenerator:
 
             # put code in a file
             try:
-                os.makedirs(f"{GENERATIONS_PATH}/{self.video_id}/{scene_id}")
+                if not os.path.exists(f"{GENERATIONS_PATH}/{self.video_id}/{scene_id}"):
+                    os.makedirs(f"{GENERATIONS_PATH}/{self.video_id}/{scene_id}")
                 with open(f"{GENERATIONS_PATH}/{self.video_id}/{scene_id}/video.py", "w") as f:
                     f.write(output)
             except Exception as e:
@@ -139,18 +155,18 @@ class SceneGenerator:
         scene_ids = []
         video_clips = []
 
-        for scene_description in self.scene_transcriptions:
-            scene_id = self.generate_scene(scene_description)
+        for scene_transcription in self.scene_transcriptions:
+            scene_id = self.generate_scene(scene_transcription)
             if scene_id is None:
-                logger.error(f"Scene could not be generated for: {scene_description}")
+                logger.error(f"Scene could not be generated for: {scene_transcription}")
                 continue
 
-            scene_path = f"{GENERATIONS_PATH}/{scene_id}/{VIDEO_INTERNAL_PATH}.mp4"
+            scene_path = f"{GENERATIONS_PATH}/{self.video_id}/{scene_id}/{VIDEO_INTERNAL_PATH}"
             if os.path.exists(scene_path):
                 video_clips.append(VideoFileClip(scene_path))
                 scene_ids.append(scene_id)
             else:
-                logger.error(f"Video file does not exist for scene ID: {scene_id}")
+                logger.error(f"Video file does not exist at path: {scene_path}")
 
         if not video_clips:
             logger.error("No scenes were successfully generated.")
