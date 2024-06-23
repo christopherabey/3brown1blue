@@ -1,7 +1,6 @@
 "use client";
-import React, { useState, useRef, RefObject } from "react";
+import React, { useState, useRef, RefObject, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
-import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import Message from "@/components/ui/message";
 import VideoStream from "@/components/videostream"; // Adjust the path as per your file structure
@@ -20,6 +19,18 @@ export function Page() {
   const [video, setVideo] = useState<boolean>(false);
   const [mic, setMic] = useState<boolean>(false);
   const textareaRef: RefObject<HTMLTextAreaElement> = useRef(null);
+  const [videoID, setVideoID] = useState<string>("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   function handleVideoClick() {
     setVideo((prev) => !prev);
@@ -49,8 +60,8 @@ export function Page() {
       // Send the chat message
       console.log("Sending chat message..." + messageText);
 
-      setMessages([
-        ...messages,
+      setMessages((prevMessages) => [
+        ...prevMessages,
         {
           avatarSrc: "/placeholder-user.jpg",
           avatarFallback: "OA",
@@ -63,43 +74,63 @@ export function Page() {
 
       textarea.value = "";
 
-    // make a fetch request to the backend
-    fetch("http://localhost:8000/generate/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ text: messageText })
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        return response.json(); // or .text() or .blob() depending on your response type
+      return
+
+      // Make a fetch request to the backend
+      fetch("http://localhost:8000/generate/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: messageText }),
       })
-      .then(data => {
-        // Handle the data received from the backend
-        console.log(data);
-      })
-      .catch(error => {
-        // Handle errors
-        console.error('Fetch error:', error);
-      });
-    
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json(); // or .text() or .blob() depending on your response type
+        })
+        .then((data) => {
+          // Handle the data received from the backend
+          console.log(data);
+          setVideoID(data.video_id);
+
+          setMessages((prevMessages) => [
+            ...prevMessages,
+            {
+              avatarSrc: "/placeholder-user.jpg",
+              avatarFallback: "OA",
+              author: "3Blue1Brown",
+              text: data.text,
+              backgroundColor: "brown",
+              side: "receiver",
+            },
+          ]);
+
+          
+        })
+        .catch((error) => {
+          // Handle errors
+          console.error('Fetch error:', error);
+        });
+    }
   }
-}
 
   return (
     <div className="flex flex-col h-screen">
-      <div className="flex-1 relative grid grid-cols-[1fr_300px]">
+      <div className="flex-1 relative grid grid-cols-[1fr_300px] overflow-hidden">
         <div className="relative">
           <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm grid grid-cols-1 gap-2 p-4">
-            <div className="rounded-xl overflow-hidden">
-              <video
+            <div className="rounded-xl">
+              {videoID ? <video
                 className="w-full h-full object-cover"
-                src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                src={`http://localhost:8000/videos/${videoID}`}
                 controls
-              />
+              /> : <video
+              className="w-full h-full object-cover"
+              src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+              controls
+            />}
               {/* Overlay VideoStream component in the top right corner */}
               <div className="absolute top-4 right-4 z-10">
                 {video && <VideoStream width={200} height={150} />}
@@ -107,9 +138,9 @@ export function Page() {
             </div>
           </div>
         </div>
-        <div className="bg-background/50 backdrop-blur-sm border-l flex flex-col">
-          <div className="flex-1 overflow-auto">
-            <div className="p-4 space-y-4">
+        <div className="bg-background/50 backdrop-blur-sm border-l flex flex-col overflow-hidden">
+          <div ref={scrollRef} className="flex-1 overflow-scroll">
+            <div className="p-4 space-y-4 overflow-y-auto">
               {messages.map((message, index) => (
                 <Message
                   key={index}
