@@ -1,88 +1,88 @@
-import React, { useRef, useEffect } from "react";
+import React, { useEffect, useRef, useState } from 'react';
 
 const VideoStream: React.FC = () => {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const socketRef = useRef<WebSocket | null>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [socket, setSocket] = useState<WebSocket | null>(null);
+    const [isSocketOpen, setIsSocketOpen] = useState<boolean>(false);
+    const [messages, setMessages] = useState<string[]>([]);
+    
+    useEffect(() => {
+        // Open WebSocket connection
+        const ws = new WebSocket('ws://localhost:8000/ws');
+        
+        ws.onopen = () => {
+            setIsSocketOpen(true);
+            setSocket(ws);
+        };
 
-  useEffect(() => {
-    // Initialize WebSocket connection
-    socketRef.current = new WebSocket("ws://localhost:8000/ws");
+        ws.onmessage = (event) => {
+            const result = JSON.parse(event.data);
+            setMessages((prevMessages) => [...prevMessages, JSON.stringify(result)]);
+        };
 
-    socketRef.current.onopen = () => {
-      console.log("WebSocket connection established");
-    };
+        ws.onerror = (error) => {
+            console.error("WebSocket error:", error);
+        };
 
-    socketRef.current.onmessage = (event) => {
-      console.log("Message from server ", event.data);
-    };
+        ws.onclose = () => {
+            console.log("WebSocket connection closed");
+            setIsSocketOpen(false);
+        };
 
-    socketRef.current.onerror = (error) => {
-      console.log("WebSocket error: ", error);
-    };
+        return () => {
+            ws.close();
+        };
+    }, []);
 
-    socketRef.current.onclose = () => {
-      console.log("WebSocket connection closed");
-    };
-
-    // Access webcam
-    navigator.mediaDevices
-      .getUserMedia({ video: true })
-      .then((stream) => {
+    useEffect(() => {
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+            const video = videoRef.current;
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    video.srcObject = stream;
+                    video.play();
+                })
+                .catch(error => {
+                    console.error("Error accessing webcam:", error);
+                });
         }
-      })
-      .catch((err) => console.error("Error accessing webcam: ", err));
+    }, []);
 
-    // Capture and send frames
-    const sendFrame = () => {
-      if (canvasRef.current && videoRef.current) {
-        const context = canvasRef.current.getContext("2d");
-        if (context) {
-          context.drawImage(
-            videoRef.current,
-            0,
-            0,
-            canvasRef.current.width,
-            canvasRef.current.height
-          );
-          canvasRef.current.toBlob((blob) => {
-            if (blob && socketRef.current) {
-              const reader = new FileReader();
-              reader.onloadend = () => {
-                if (socketRef.current) {
-                  socketRef.current.send(reader.result as string);
-                }
-              };
-              reader.readAsDataURL(blob);
+    useEffect(() => {
+        const captureFrame = () => {
+            if (videoRef.current && socket && isSocketOpen) {
+                const canvas = document.createElement('canvas');
+                canvas.width = videoRef.current.videoWidth;
+                canvas.height = videoRef.current.videoHeight;
+                const context = canvas.getContext('2d');
+                context?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+
+                const frameData = canvas.toDataURL('image/png');
+                socket.send(frameData);
+
+                setTimeout(captureFrame, 100); // Adjust interval as needed
+            } else {
+                setTimeout(captureFrame, 100); // Retry after a delay
             }
-          }, "image/jpeg");
-        }
-      }
-    };
+        };
 
-    const interval = setInterval(sendFrame, 1000 / 30); // 30 fps
+        captureFrame();
+    }, [socket, isSocketOpen]);
 
-    return () => {
-      clearInterval(interval);
-      if (socketRef.current) {
-        socketRef.current.close();
-      }
-    };
-  }, []);
-
-  return (
-    <div>
-      <video ref={videoRef} autoPlay style={{ display: "none" }}></video>
-      <canvas
-        ref={canvasRef}
-        width={640}
-        height={480}
-        style={{ display: "none" }}
-      ></canvas>
-    </div>
-  );
+    return (
+        <div>
+            <h1>Video Stream</h1>
+            <video ref={videoRef} style={{ width: '100%' }}></video>
+            <div>
+                <h2>Messages:</h2>
+                <ul>
+                    {messages.map((msg, index) => (
+                        <li key={index}>{msg}</li>
+                    ))}
+                </ul>
+            </div>
+        </div>
+    );
 };
 
 export default VideoStream;
