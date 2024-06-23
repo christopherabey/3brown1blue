@@ -11,3 +11,4 @@ pydantic
 anthropic
 lmnt
 groq
+boto3
