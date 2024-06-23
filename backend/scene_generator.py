@@ -11,8 +11,7 @@ from moviepy.audio.AudioClip import AudioClip
 from speech import speech_client
 import json
 import asyncio
-import multiprocessing
-from concurrent.futures import ProcessPoolExecutor
+import aiohttp
 
 
 """
@@ -166,6 +165,9 @@ class SceneGenerator:
         scene_transcription = self.scene_transcriptions[scene_id]
         synthesis = await speech_client.synthesize(scene_transcription, voice='lily', format='wav')
         audio_path = f"{GENERATIONS_PATH}/{video_id}/{scene_id}/audio.wav"
+        # if audio path does not exist, create it
+        if not os.path.exists(f"{GENERATIONS_PATH}/{video_id}/{scene_id}"):
+            os.makedirs(f"{GENERATIONS_PATH}/{video_id}/{scene_id}")
         with open(audio_path, 'wb') as audio_file:
             audio_file.write(synthesis['audio'])
         
@@ -174,7 +176,7 @@ class SceneGenerator:
         
             
 
-    def generate_manim(self, scene_id):
+    async def generate_manim(self, scene_id):
         """
         Generates manim code from the scene description
         :param scene_description: Scene description (string)
@@ -189,7 +191,7 @@ class SceneGenerator:
         }]
 
         while iteration < MAX_ITERATIONS:
-            response = client.chat.completions.create(
+            response = await client.chat.completions.create(
                 model="gpt-4o",
                 messages=messages
             )
@@ -319,27 +321,24 @@ class SceneGenerator:
         Generates manim code for all scenes and stitches them together into a single video.
         :return: Path to the final stitched video.
         """
-        with ProcessPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
-            loop = asyncio.get_running_loop()
-            tasks = []
-            for scene_id in self.scene_transcriptions.keys():
-                # Use run_in_executor for potentially CPU-bound tasks
-                manim_task = loop.run_in_executor(executor, self.generate_manim, scene_id)
-                speech_task = loop.run_in_executor(executor, self.generate_speech, scene_id, self.video_id)
-                tasks.append((manim_task, speech_task, scene_id))
+        tasks = []
+        for scene_id, transcription in self.scene_transcriptions.items():
+            manim_task = asyncio.create_task(self.generate_manim(scene_id))
+            speech_task = asyncio.create_task(self.generate_speech(scene_id, self.video_id))
+            tasks.append((manim_task, speech_task))
 
-                # Wait for all tasks to complete
-            results = await asyncio.gather(*(asyncio.gather(*task_pair[:2]) for task_pair in tasks))
-        
-            logger.info(f"Results: {results}")
+        # Wait for all tasks to complete
+        results = await asyncio.gather(*(asyncio.gather(*task_pair[:2]) for task_pair in tasks))
 
-            for (manim_result, speech_result), scene_id in zip(results, self.scene_transcriptions.keys()):
-                if manim_result is None or speech_result is None:
-                    logger.error(f"Scene {scene_id} was not generated successfully")
-                    continue
-                self.combine_manim_and_speech(scene_id, self.video_id)
+        logger.info(f"Results: {results}")
 
-            self.combine_video_scenes()
+        for (manim_result, speech_result), scene_id in zip(results, self.scene_transcriptions.keys()):
+            if manim_result is None or speech_result is None:
+                logger.error(f"Scene {scene_id} was not generated successfully")
+                continue
+            self.combine_manim_and_speech(scene_id, self.video_id)
+
+        self.combine_video_scenes()
         
 
         

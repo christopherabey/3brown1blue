@@ -1,3 +1,3 @@
-from openai import OpenAI
+from openai import AsyncOpenAI 
 
-client = OpenAI()
+client = AsyncOpenAI()
