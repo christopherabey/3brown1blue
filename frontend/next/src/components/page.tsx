@@ -1,8 +1,61 @@
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+"use client";
+
+import { useState, useRef, RefObject } from "react";
 import { Textarea } from "@/components/ui/textarea";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
+import Message from "@/components/ui/message";
+
+// Dynamically import the Webcam component for client-side rendering
+const Webcam = dynamic(() => import("@/components/webcam"), { ssr: false });
+
+interface Message {
+  avatarSrc: string;
+  avatarFallback: string;
+  author: string;
+  text: string;
+}
 
 export function Page() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const textareaRef: RefObject<HTMLTextAreaElement> = useRef(null);
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      sendChatMessage();
+    }
+  }
+
+  function sendChatMessage() {
+    const textarea = textareaRef.current;
+
+    if (textarea) {
+      const messageText = textarea.value;
+
+      if (messageText.trim() === "") {
+        return;
+      }
+
+      // Send the chat message
+      console.log("Sending chat message..." + messageText);
+
+      setMessages([
+        ...messages,
+        {
+          avatarSrc: "/placeholder-user.jpg",
+          avatarFallback: "OA",
+          author: "Alex",
+          text: messageText,
+        },
+      ]);
+
+      textarea.value = "";
+    }
+
+    // Create Message component that displays the chat message in the chat window
+  }
+
   return (
     <div className="flex flex-col h-screen">
       <div className="flex-1 relative grid grid-cols-[1fr_300px]">
@@ -20,56 +73,26 @@ export function Page() {
         <div className="bg-background/50 backdrop-blur-sm border-l flex flex-col">
           <div className="flex-1 overflow-auto">
             <div className="p-4 space-y-4">
-              <div className="flex items-start gap-4">
-                <Avatar className="w-8 h-8 border">
-                  <AvatarImage src="/placeholder-user.jpg" />
-                  <AvatarFallback>YO</AvatarFallback>
-                </Avatar>
-                <div className="grid gap-1">
-                  <div className="font-bold">You</div>
-                  <div className="prose text-muted-foreground">
-                    <p>
-                      Hey everyone, can you hear me okay? I just wanted to check
-                      in and make sure the video and audio are working properly.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <Avatar className="w-8 h-8 border">
-                  <AvatarImage src="/placeholder-user.jpg" />
-                  <AvatarFallback>OA</AvatarFallback>
-                </Avatar>
-                <div className="grid gap-1">
-                  <div className="font-bold">Alex</div>
-                  <div className="prose text-muted-foreground">
-                    <p>Yep, everything looks and sounds good on my end!</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <Avatar className="w-8 h-8 border">
-                  <AvatarImage src="/placeholder-user.jpg" />
-                  <AvatarFallback>SA</AvatarFallback>
-                </Avatar>
-                <div className="grid gap-1">
-                  <div className="font-bold">Sarah</div>
-                  <div className="prose text-muted-foreground">
-                    <p>
-                      Great, I'm ready to get started whenever you all are!
-                      Let's do this.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              {messages.map((message, index) => (
+                <Message
+                  key={index}
+                  avatarSrc={message.avatarSrc}
+                  avatarFallback={message.avatarFallback}
+                  author={message.author}
+                  text={message.text}
+                />
+              ))}
             </div>
           </div>
           <div className="bg-background/50 backdrop-blur-sm border-t flex items-center justify-center gap-4 p-4">
             <Textarea
+              onKeyDown={handleKeyDown}
+              ref={textareaRef}
               className="flex-1 min-h-[48px] rounded-2xl resize-none p-4 border border-neutral-400 shadow-sm"
               placeholder="Type your message..."
             />
             <Button
+              onClick={sendChatMessage}
               variant="ghost"
               size="icon"
               className="text-muted-foreground"
@@ -86,6 +109,7 @@ export function Page() {
         <Button variant="ghost" size="icon" className="text-muted-foreground">
           <VideoIcon className="w-6 h-6" />
         </Button>
+        <Webcam />
       </div>
     </div>
   );
