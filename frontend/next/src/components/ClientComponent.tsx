@@ -10,6 +10,7 @@ import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { Input } from "./ui/input";
 import { ChevronDown, PlayIcon, SendIcon } from "lucide-react";
+import { Chat } from "./Chat";
 
 interface Message {
   avatarSrc: string;
@@ -101,6 +102,9 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
           </h3>
         </div>
         <div className="w-full flex justify-center align-middle items-center flex-col">
+          <div className="mx-auto bg-black">
+            <Chat accessToken={accessToken} />
+          </div>
           <Button
             onClick={() => setShowGame((prev) => !prev)}
             variant="outline"
