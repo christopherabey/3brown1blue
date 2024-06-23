@@ -16,7 +16,7 @@ const Message: React.FC<MessageProps> = ({
   text,
 }) => {
   return (
-    <div className="flex items-start gap-4">
+    <div className="flex items-start gap-4 bg-blue-500">
       <Avatar className="w-8 h-8 border">
         <AvatarImage src={avatarSrc} />
         <AvatarFallback>{avatarFallback}</AvatarFallback>

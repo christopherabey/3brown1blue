@@ -1,88 +1,100 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from "react";
 
-const VideoStream: React.FC = () => {
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const [socket, setSocket] = useState<WebSocket | null>(null);
-    const [isSocketOpen, setIsSocketOpen] = useState<boolean>(false);
-    const [messages, setMessages] = useState<string[]>([]);
-    
-    useEffect(() => {
-        // Open WebSocket connection
-        const ws = new WebSocket('ws://localhost:8000/ws');
-        
-        ws.onopen = () => {
-            setIsSocketOpen(true);
-            setSocket(ws);
-        };
+interface VideoStreamProps {
+  width: number;
+  height: number;
+}
 
-        ws.onmessage = (event) => {
-            const result = JSON.parse(event.data);
-            setMessages((prevMessages) => [...prevMessages, JSON.stringify(result)]);
-        };
+const VideoStream: React.FC<VideoStreamProps> = ({ width, height }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [isSocketOpen, setIsSocketOpen] = useState<boolean>(false);
+  const [messages, setMessages] = useState<string[]>([]);
 
-        ws.onerror = (error) => {
-            console.error("WebSocket error:", error);
-        };
+  useEffect(() => {
+    // Open WebSocket connection
+    const ws = new WebSocket("ws://localhost:8000/ws");
 
-        ws.onclose = () => {
-            console.log("WebSocket connection closed");
-            setIsSocketOpen(false);
-        };
+    ws.onopen = () => {
+      setIsSocketOpen(true);
+      setSocket(ws);
+    };
 
-        return () => {
-            ws.close();
-        };
-    }, []);
+    ws.onmessage = (event) => {
+      const result = JSON.parse(event.data);
+      setMessages(() => [JSON.stringify(result)]);
+    };
 
-    useEffect(() => {
-        if (videoRef.current) {
-            const video = videoRef.current;
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(stream => {
-                    video.srcObject = stream;
-                    video.play();
-                })
-                .catch(error => {
-                    console.error("Error accessing webcam:", error);
-                });
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    ws.onclose = () => {
+      console.log("WebSocket connection closed");
+      setIsSocketOpen(false);
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            videoRef.current.play();
+            videoRef.current.style.transform = "scaleX(-1)"; // Mirror effect
+          }
+        })
+        .catch((error) => {
+          console.error("Error accessing webcam:", error);
+        });
+    }
+  }, []);
+
+  useEffect(() => {
+    const captureFrame = () => {
+      if (videoRef.current && socket && isSocketOpen) {
+        const canvas = document.createElement("canvas");
+        canvas.width = width; // Use width and height props directly
+        canvas.height = height;
+        const context = canvas.getContext("2d");
+        if (context) {
+          context.drawImage(
+            videoRef.current,
+            0,
+            0,
+            canvas.width,
+            canvas.height
+          );
+          const frameData = canvas.toDataURL("image/png");
+          socket.send(frameData);
         }
-    }, []);
 
-    useEffect(() => {
-        const captureFrame = () => {
-            if (videoRef.current && socket && isSocketOpen) {
-                const canvas = document.createElement('canvas');
-                canvas.width = videoRef.current.videoWidth;
-                canvas.height = videoRef.current.videoHeight;
-                const context = canvas.getContext('2d');
-                context?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        setTimeout(captureFrame, 1000); // Adjust interval as needed
+      } else {
+        setTimeout(captureFrame, 1000); // Retry after a delay
+      }
+    };
 
-                const frameData = canvas.toDataURL('image/png');
-                socket.send(frameData);
+    captureFrame();
+  }, [socket, isSocketOpen, width, height]); // Include width and height in dependencies
 
-                setTimeout(captureFrame, 100); // Adjust interval as needed
-            } else {
-                setTimeout(captureFrame, 100); // Retry after a delay
-            }
-        };
-
-        captureFrame();
-    }, [socket, isSocketOpen]);
-
-    return (
-        <div>
-            <h1>Video Stream</h1>
-            <video ref={videoRef} style={{ width: '100%' }}></video>
-            <div>
-                <h2>Messages:</h2>
-                <ul>
-                    {messages.map((msg, index) => (
-                        <li key={index}>{msg}</li>
-                    ))}
-                </ul>
-            </div>
-        </div>
-    );
+  return (
+    <div>
+      <video
+        className="rounded-br-lg rounded-tl-lg"
+        ref={videoRef}
+        width={width}
+        height={height}
+        style={{ transform: "scaleX(-1)" }}
+      ></video>
+    </div>
+  );
 };
 
 export default VideoStream;
