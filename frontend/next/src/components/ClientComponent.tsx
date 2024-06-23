@@ -22,7 +22,6 @@ interface Message {
 
 export function ClientComponent({ accessToken }: { accessToken: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [video, setVideo] = useState<boolean>(false);
   const textareaRef: RefObject<HTMLTextAreaElement> = useRef(null);
   const [videoID, setVideoID] = useState<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -41,10 +40,6 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  function handleVideoClick() {
-    setVideo((prev) => !prev);
-  }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -179,14 +174,14 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
                 )}
                 {/* Overlay VideoStream component in the top right corner */}
                 <div className="absolute top-4 right-4 z-10">
-                  {video && (
+                  {
                     <VideoStream
                       width={200}
                       height={150}
                       emotions={emotions}
                       setEmotions={setEmotions}
                     />
-                  )}
+                  }
                 </div>
               </div>
             </div>
@@ -225,18 +220,6 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
         </div>
         <div className="bg-background/50 backdrop-blur-sm border-t flex items-center justify-center gap-4 p-4">
           <Controls />
-          <Button
-            onClick={handleVideoClick}
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground"
-          >
-            {video ? (
-              <VideoIcon className="w-6 h-6" />
-            ) : (
-              <VideoIcon stroke="red" className="w-6 h-6" />
-            )}
-          </Button>
         </div>
       </div>
     </VoiceProvider>
