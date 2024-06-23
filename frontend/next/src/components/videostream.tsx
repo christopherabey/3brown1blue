@@ -47,20 +47,17 @@ const VideoStream: React.FC = () => {
             canvasRef.current.width,
             canvasRef.current.height
           );
-          canvasRef.current.toBlob(
-            (blob) => {
-              if (blob && socketRef.current) {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                  if (socketRef.current) {
-                    socketRef.current.send(reader.result as string);
-                  }
-                };
-                reader.readAsDataURL(blob);
-              }
-            },
-            "image/jpeg"
-          );
+          canvasRef.current.toBlob((blob) => {
+            if (blob && socketRef.current) {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                if (socketRef.current) {
+                  socketRef.current.send(reader.result as string);
+                }
+              };
+              reader.readAsDataURL(blob);
+            }
+          }, "image/jpeg");
         }
       }
     };
