@@ -6,3 +6,4 @@ hume[stream]
 manim
 moviepy
 openai
+pydub

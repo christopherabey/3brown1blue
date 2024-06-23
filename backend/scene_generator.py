@@ -4,7 +4,9 @@ from client import client
 from logger import logger
 import os
 import subprocess
-from moviepy.editor import VideoFileClip, concatenate_videoclips
+from moviepy.editor import VideoFileClip, concatenate_videoclips, AudioFileClip, CompositeAudioClip, ImageClip, CompositeVideoClip
+from moviepy.audio.AudioClip import AudioClip
+from speech import speech_client
 
 
 """
@@ -41,6 +43,9 @@ class SceneGenerator:
         self.scene_transcriptions = scene_transcriptions
         self.video_id = str(uuid.uuid4())
 
+    def get_scene_path(self, scene_id, video_id):
+        return f"{GENERATIONS_PATH}/{video_id}/{scene_id}/{VIDEO_INTERNAL_PATH}"
+        
     def render_scene(self, scene_id):
         """
         Renders the scene with the given scene id
@@ -72,20 +77,71 @@ class SceneGenerator:
             return False, str(e)
         
 
-    def add_audio_to_scene(self, scene_id):
+        
+    async def add_audio_to_scene(self, scene_id, scene_transcription, video_id):
         """
         Adds audio to the scene with the given scene id
         :param scene_id: Scene id (string)
+        :param scene_transcription: Transcription text for TTS (string)
         """
 
         # Step 1: Create audio with tts api
+        synthesis = await speech_client.synthesize(scene_transcription, voice='lily', format='wav')
+        scene_path = self.get_scene_path(scene_id, video_id) # mp4 file path
 
-        # Step 2: Add audio to scene
+        audio_path = f"{GENERATIONS_PATH}/{video_id}/{scene_id}/audio.wav"
+
+        # Save the synthesized audio
+        with open(audio_path, 'wb') as audio_file:
+            audio_file.write(synthesis['audio'])
+
+        video = VideoFileClip(scene_path)
+        audio = AudioFileClip(audio_path)
+
+        # Get durations
+        video_duration = video.duration
+        audio_duration = audio.duration
+
+        logger.info(f"Video duration: {video_duration}, Audio duration: {audio_duration}")
+
+        # If audio is shorter than video, append silence
+        if audio_duration < video_duration:
+            silence_duration = video_duration - audio_duration
+            silence = AudioClip(lambda t: 0, duration=silence_duration)
+            audio = CompositeAudioClip([audio, silence.set_start(audio_duration)])
+        
+        # If audio is longer than video, extend the video by holding the last frame
+        elif audio_duration > video_duration:
+            logger.warning("Audio is longer than video, extending video by holding the last frame")
+            last_frame = video.get_frame(video_duration - 0.1)
+            frozen_clip = ImageClip(last_frame).set_duration(audio_duration - video_duration)
+            video = CompositeVideoClip([video, frozen_clip.set_start(video_duration)])
+            video = video.set_duration(audio_duration)
+
+        # Ensure both clips have the same duration
+        final_duration = min(video.duration, audio.duration)
+        video = video.subclip(0, final_duration)
+        audio = audio.subclip(0, final_duration)
+
+        # Composite the video with the audio
+        final_clip = video.set_audio(audio)
+
+        # Write the final video with audio
+        # wipe scene file
+        os.remove(scene_path)
+
+        final_clip.write_videofile(scene_path, codec="libx264")
 
         # Step 3: Profit
-        
+        # Close the clips to free up system resources
+        video.close()
+        audio.close()
+        final_clip.close()
 
-    def generate_scene(self, scene_transcription):
+        logger.info(f"Successfully added audio to scene {scene_id}")
+            
+
+    async def generate_scene(self, scene_transcription):
         """
         Generates manim code from the scene description
         :param scene_description: Scene description (string)
@@ -138,6 +194,7 @@ class SceneGenerator:
                 logger.info(f"Scene {scene_id} was rendered successfully")
 
                 # add audio to scene
+                await self.add_audio_to_scene(scene_id, scene_transcription, self.video_id)
                 return scene_id
             
             # scene was not rendered successfully
@@ -149,7 +206,7 @@ class SceneGenerator:
         return None
     
 
-    def generate_all_scenes(self):
+    async def generate_all_scenes(self):
         """
         Generates manim code for all scenes and stitches them together into a single video.
         :return: Path to the final stitched video.
@@ -158,12 +215,12 @@ class SceneGenerator:
         video_clips = []
 
         for scene_transcription in self.scene_transcriptions:
-            scene_id = self.generate_scene(scene_transcription)
+            scene_id = await self.generate_scene(scene_transcription)
             if scene_id is None:
                 logger.error(f"Scene could not be generated for: {scene_transcription}")
                 continue
 
-            scene_path = f"{GENERATIONS_PATH}/{self.video_id}/{scene_id}/{VIDEO_INTERNAL_PATH}"
+            scene_path = self.get_scene_path(scene_id, self.video_id)
             if os.path.exists(scene_path):
                 video_clips.append(VideoFileClip(scene_path))
                 scene_ids.append(scene_id)
