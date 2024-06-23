@@ -1,5 +1,6 @@
 import base64
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from hume import HumeStreamClient
 from hume.models.config import FaceConfig
@@ -16,6 +17,19 @@ load_dotenv()
 
 app = FastAPI()
 
+origins = [
+    "http://localhost:3000",
+    "http://localhost",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 class VideoRequest(BaseModel):
     text: str
 
@@ -23,7 +37,7 @@ class VideoRequest(BaseModel):
 def read_root():
     return {"message": "Hello world"}
 
-@app.get("/generate")
+@app.post("/generate/")
 async def generate(request: VideoRequest):
     """
     Takes in a topic and returns a video id for the generated video
@@ -32,7 +46,7 @@ async def generate(request: VideoRequest):
     transcript_generator = TranscriptGenerator()
     transcriptions = await transcript_generator.generate_transcript(text)
     scene_generator = SceneGenerator(transcriptions)
-    video_id = await scene_generator.generate_scenes()
+    video_id = await scene_generator.generate_all_scenes()
 
     return {"video_id": video_id, "text": "\n".join(transcriptions)}
 
@@ -65,12 +79,11 @@ async def websocket_endpoint(websocket: WebSocket):
                         tmp_file.write(frame_data)
                         tmp_file_path = tmp_file.name
 
-                    try:
-                        result = await socket.send_file(tmp_file_path)
-                        await websocket.send_json(result)
-                    finally:
-                        os.remove(tmp_file_path)
-                        time.sleep(2)
+                        try:
+                            result = await socket.send_file(tmp_file_path)
+                            await websocket.send_json(result)
+                        except Exception as e:
+                            print(f"Error: {e}", sys.exc_info())
                 else:
                     print("Received unexpected data format")
 
