@@ -31,10 +31,13 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
   const { setTheme } = useTheme();
   const [starting, setStarting] = useState<boolean>(true);
   const [showGame, setShowGame] = useState<boolean>(false);
-  // const { connect } = useVoice();
+  const { disconnect } = useVoice();
 
   function generateVideo() {
     setStarting(false);
+    setVideoPlaying(false);
+    setVideoID("");
+    disconnect();
     const textarea = textareaRef.current;
 
     if (textarea) {
@@ -107,6 +110,12 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
           <div className="w-full">
             <Chat accessToken={accessToken} />
           </div>
+          <VideoStream
+            width={300}
+            height={200}
+            emotions={emotions}
+            setEmotions={setEmotions}
+          />
           <Button
             onClick={() => setShowGame((prev) => !prev)}
             variant="outline"
@@ -141,12 +150,7 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
             />
           </div>
         )}
-        <VideoStream
-          width={300}
-          height={200}
-          emotions={emotions}
-          setEmotions={setEmotions}
-        />
+
         <div
           className={cn(
             "flex flex-col w-[80%] absolute  gap-4 transition-all ease-in-out h-full py-12",

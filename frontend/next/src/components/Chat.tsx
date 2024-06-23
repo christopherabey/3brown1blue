@@ -31,13 +31,13 @@ export function Chat({ accessToken }: { accessToken: string }) {
   }, [messages]);
 
   return (
-    <VoiceProvider auth={{ type: "accessToken", value: accessToken }}>
+    <>
       <Controls />
       <div className="bg-background/50 backdrop-blur-sm border-l flex flex-col overflow-hidden">
         <div ref={scrollRef} className="flex-1 overflow-scroll">
           <Messages />
         </div>
       </div>
-    </VoiceProvider>
+    </>
   );
 }

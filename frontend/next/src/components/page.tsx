@@ -1,6 +1,7 @@
 // ./app/page.tsx
 import ClientComponent from "@/components/ClientComponent";
 import { fetchAccessToken } from "@humeai/voice";
+import { VoiceProvider } from "@humeai/voice-react";
 import * as dotenv from "dotenv";
 
 dotenv.config();
@@ -15,5 +16,9 @@ export default async function Page() {
     throw new Error();
   }
 
-  return <ClientComponent accessToken={accessToken} />;
+  return (
+    <VoiceProvider auth={{ type: "accessToken", value: accessToken }}>
+      <ClientComponent accessToken={accessToken} />
+    </VoiceProvider>
+  );
 }
