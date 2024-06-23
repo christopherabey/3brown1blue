@@ -52,7 +52,7 @@ Format example:
         """
         iteration = 0
         messages = [{
-            "role": "system", "content": SYSTEM_TRANSCRIPTION_PROMPT
+            "role": "system", "content": self.generate_emotion_system_prompt(emotions)
         }, {
             "role": "user", "content": user_topic
         }]

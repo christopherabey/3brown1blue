@@ -4,6 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import Message from "@/components/ui/message";
 import VideoStream from "@/components/videostream"; // Adjust the path as per your file structure
+import { Progress } from "./ui/progress";
 
 interface Message {
   avatarSrc: string;
@@ -21,7 +22,9 @@ export function Page() {
   const textareaRef: RefObject<HTMLTextAreaElement> = useRef(null);
   const [videoID, setVideoID] = useState<string>("");
   const [emotions, setEmotions] = useState<string>(""); // string of comma-separated emotions
+  const [progress, setProgress] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const progressInterval = useRef<NodeJS.Timeout | null>(null);
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
@@ -45,6 +48,35 @@ export function Page() {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       sendChatMessage();
+    }
+  }
+
+  function startProgress() {
+    setProgress(0);
+
+    // clear progress interval if it exists
+    if (progressInterval.current) {
+      clearInterval(progressInterval.current);
+    }
+
+    progressInterval.current = setInterval(() => {
+      setProgress((prevProgress) => {
+        if (prevProgress === 100) {
+          return 100;
+        } else if (prevProgress === null) {
+          return 1;
+        }
+        return prevProgress + 1;
+      });
+    }, 1000);
+  }
+
+  function stopProgress() {
+    setProgress(null);
+
+    // clear progress interval if it exists
+    if (progressInterval.current) {
+      clearInterval(progressInterval.current);
     }
   }
 
@@ -75,8 +107,7 @@ export function Page() {
 
       textarea.value = "";
 
-      return;
-
+      startProgress();
       // Make a fetch request to the backend
       fetch("http://localhost:8000/generate/", {
         method: "POST",
@@ -107,13 +138,43 @@ export function Page() {
               side: "receiver",
             },
           ]);
+          stopProgress();
         })
         .catch((error) => {
           // Handle errors
           console.error("Fetch error:", error);
+          stopProgress();
         });
     }
   }
+
+  const VideoOrLoader = () => {
+    if (progress !== null) {
+      return (
+        <div className="w-full h-full p-4 flex flex-col justify-center items-center align-middle">
+          <div className="text-muted-foreground">Loading...</div>
+          <iframe src="dinosaur_game.html" className="w-full h-80 my-8" />
+          <Progress value={progress} className="w-60 px-4" />
+        </div>
+      );
+    } else if (videoID) {
+      return (
+        <video
+          className="w-full h-full object-cover"
+          src={`http://localhost:8000/videos/${videoID}`}
+          controls
+        />
+      );
+    } else {
+      return (
+        <video
+          className="w-full h-full object-cover"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          controls
+        />
+      );
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen">
@@ -121,19 +182,7 @@ export function Page() {
         <div className="relative">
           <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm grid grid-cols-1 gap-2 p-4">
             <div className="rounded-xl">
-              {videoID ? (
-                <video
-                  className="w-full h-full object-cover"
-                  src={`http://localhost:8000/videos/${videoID}`}
-                  controls
-                />
-              ) : (
-                <video
-                  className="w-full h-full object-cover"
-                  src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-                  controls
-                />
-              )}
+              <VideoOrLoader />
               {/* Overlay VideoStream component in the top right corner */}
               <div className="absolute top-4 right-4 z-10">
                 {video && (
