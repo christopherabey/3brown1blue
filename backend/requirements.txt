@@ -8,3 +8,4 @@ moviepy
 openai
 pydub
 pydantic
+lmnt
