@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, RefObject, useEffect } from "react";
+import React, { useState, useRef, RefObject, useEffect, useMemo } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import Message from "@/components/ui/message";
@@ -119,37 +119,6 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
     }
   }
 
-  const VideoOrLoader = () => {
-    if (loading) {
-      return (
-        <div className="w-full h-full p-4 flex flex-col justify-center items-center align-middle">
-          <div className="text-muted-foreground flex flex-row gap-2">
-            <LoadingSpinner />
-            Loading. This will take a minute...
-          </div>
-          <iframe src="dinosaur_game.html" className="w-full h-80 my-8" />
-        </div>
-      );
-    } else if (videoID) {
-      return (
-        <video
-          className="w-full h-full object-cover"
-          src={`http://localhost:8000/videos/${videoID}`}
-          controls
-          autoPlay
-        />
-      );
-    } else {
-      return (
-        <video
-          className="w-full h-full object-cover"
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-          controls
-        />
-      );
-    }
-  };
-
   return (
     <VoiceProvider auth={{ type: "accessToken", value: accessToken }}>
       <Messages />
@@ -158,30 +127,35 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
           <div className="relative">
             <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm grid grid-cols-1 gap-2 p-4">
               <div className="rounded-xl">
-                <VideoOrLoader />
-                {videoID ? (
+                {loading && (
+                  <div className="w-full h-full p-4 flex flex-col justify-center items-center align-middle">
+                    <div className="text-muted-foreground flex flex-row gap-2">
+                      <LoadingSpinner />
+                      Loading. This will take a minute...
+                    </div>
+                    <iframe
+                      src="dinosaur_game.html"
+                      className="w-full h-80 my-8"
+                    />
+                  </div>
+                )}
+                {!loading && videoID && (
                   <video
                     className="w-full h-full object-cover"
                     src={`http://localhost:8000/videos/${videoID}`}
                     controls
-                  />
-                ) : (
-                  <video
-                    className="w-full h-full object-cover"
-                    src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-                    controls
+                    autoPlay
                   />
                 )}
+
                 {/* Overlay VideoStream component in the top right corner */}
                 <div className="absolute top-4 right-4 z-10">
-                  {
-                    <VideoStream
-                      width={200}
-                      height={150}
-                      emotions={emotions}
-                      setEmotions={setEmotions}
-                    />
-                  }
+                  <VideoStream
+                    width={300}
+                    height={200}
+                    emotions={emotions}
+                    setEmotions={setEmotions}
+                  />
                 </div>
               </div>
             </div>
