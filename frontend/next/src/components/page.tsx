@@ -62,8 +62,32 @@ export function Page() {
       ]);
 
       textarea.value = "";
-    }
+
+    // make a fetch request to the backend
+    fetch("http://localhost:8000/generate/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text: messageText })
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json(); // or .text() or .blob() depending on your response type
+      })
+      .then(data => {
+        // Handle the data received from the backend
+        console.log(data);
+      })
+      .catch(error => {
+        // Handle errors
+        console.error('Fetch error:', error);
+      });
+    
   }
+}
 
   return (
     <div className="flex flex-col h-screen">

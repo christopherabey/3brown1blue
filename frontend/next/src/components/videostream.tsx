@@ -9,7 +9,7 @@ const VideoStream: React.FC<VideoStreamProps> = ({ width, height }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isSocketOpen, setIsSocketOpen] = useState<boolean>(false);
-  const [messages, setMessages] = useState<string[]>([]);
+  const [messages, setMessages] = useState<string>("");
 
   useEffect(() => {
     // Open WebSocket connection
@@ -22,7 +22,20 @@ const VideoStream: React.FC<VideoStreamProps> = ({ width, height }) => {
 
     ws.onmessage = (event) => {
       const result = JSON.parse(event.data);
-      setMessages(() => [JSON.stringify(result)]);
+
+      const jsonString = JSON.stringify(
+        result?.face?.predictions
+          ? result?.face?.predictions[0]?.emotions
+              ?.sort((a: any, b: any) => b.score - a.score)
+              .slice(0, 1)[0].name.replace(/""/g, '')
+          : []
+
+      );
+      const parsedValue = JSON.parse(jsonString);
+      const extractedValue = parsedValue.replace(/^"(.*)"$/, '$1');
+
+      setMessages(extractedValue)
+
     };
 
     ws.onerror = (error) => {
@@ -93,6 +106,16 @@ const VideoStream: React.FC<VideoStreamProps> = ({ width, height }) => {
         height={height}
         style={{ transform: "scaleX(-1)" }}
       ></video>
+      { messages === "" ? <div></div> : <p style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          color: "white",
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+          padding: "5px",
+          margin: "0",
+        }}>{messages}</p>}
+      
     </div>
   );
 };
