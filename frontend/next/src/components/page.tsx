@@ -3,6 +3,7 @@ import ClientComponent from "@/components/ClientComponent";
 import { fetchAccessToken } from "@humeai/voice";
 import { VoiceProvider } from "@humeai/voice-react";
 import * as dotenv from "dotenv";
+import Eye  from "./ui/eye"; 
 
 dotenv.config();
 
@@ -16,9 +17,11 @@ export default async function Page() {
     throw new Error();
   }
 
-  return (
+  // return <ClientComponent accessToken={accessToken} />;
+  return <>
     <VoiceProvider auth={{ type: "accessToken", value: accessToken }}>
       <ClientComponent accessToken={accessToken} />
-    </VoiceProvider>
-  );
+    </VoiceProvider>      
+    <Eye /> 
+    </>
 }
