@@ -1,0 +1,40 @@
+.eye-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.eye {
+  width: 200px;
+  height: 200px;
+  background: url('./3b1b.png') no-repeat center center / contain;
+  border-radius: 50%;
+  position: relative;
+  animation: pulse 2s infinite;
+  box-shadow: 0 0 30px 20px rgba(255, 255, 0, 0.7);
+
+}
+
+.pupil {
+  width: 50px;
+  height: 50px;
+  background: black;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
