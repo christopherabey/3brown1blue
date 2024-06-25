@@ -53,8 +53,6 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
             .map((emotion: any) => emotion.name)
             .join(", ")
         );
-      } else {
-        setEmotions("");
       }
     };
 
@@ -94,7 +92,7 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
       // setTheme("dark");
 
       // Make a fetch request to the backend
-      fetch("http://localhost:8000/generate_stub/", {
+      fetch("http://localhost:8000/generate/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -128,7 +126,7 @@ export function ClientComponent({ accessToken }: { accessToken: string }) {
   const LoadingComponent = () => {
     console.log("rendering loading component");
     return (
-      <div className="w-full h-full flex flex-col p-4 gap-4 overflow-hidden">
+      <div className="w-full h-full flex flex-col p-4 gap-4">
         <div className="flex flex-col gap-4 items-center justify-center">
           {videoID ? (
             <Button onClick={startPlayingVideo} variant="outline">

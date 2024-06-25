@@ -12,6 +12,8 @@ import sys
 from pydantic import BaseModel
 from transcript_generator import TranscriptGenerator
 from scene_generator import SceneGenerator
+from logger import logger
+import asyncio
 
 load_dotenv()
 
@@ -70,33 +72,50 @@ async def get_video(video_id: str):
 
     return StreamingResponse(iterfile(), media_type="video/mp4")
 
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     client = HumeStreamClient(api_key=os.getenv("HUME_API_KEY"))
     config = FaceConfig(identify_faces=True)
     
-    async with client.connect([config]) as socket:
-        time.sleep(3) # wait for the socket to connect
-        try:
+    try:
+        async with client.connect([config]) as socket:
+            logger.info("Connected to Hume API")
+            await asyncio.sleep(3)  # wait for the socket to connect
+            
             while True:
-                data = await websocket.receive_text()
-                if data.startswith('data:image/png;base64,'):
-                    frame_data = base64.b64decode(data.split(",")[1])
-                    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
-                        tmp_file.write(frame_data)
-                        tmp_file_path = tmp_file.name
+                try:
+                    data = await websocket.receive_text()
+                    if data.startswith('data:image/png;base64,'):
+                        frame_data = base64.b64decode(data.split(",")[1])
+                        
+                        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
+                            tmp_file.write(frame_data)
+                            tmp_file_path = tmp_file.name
+
+                        logger.debug(f"Temporary file saved at: {tmp_file_path}")
 
                         try:
-                            result = await socket.send_file(tmp_file_path)
-                            await websocket.send_json(result)
+                            if os.path.exists(tmp_file_path) and os.path.getsize(tmp_file_path) > 0:
+                                logger.debug(f"File size: {os.path.getsize(tmp_file_path)} bytes")
+                                result = await socket.send_file(tmp_file_path)
+                                await websocket.send_json(result)
+                            else:
+                                logger.error("Temporary file is empty or does not exist")
                         except Exception as e:
-                            print(f"Error: {e}", sys.exc_info())
-                else:
-                    print("Received unexpected data format")
-
-        except WebSocketDisconnect as e:
-            print("WebSocket connection closed")
-            print(f"Error: {e}", sys.exc_info())
-        except Exception as e:
-            print(f"Error: {e}", sys.exc_info())
+                            logger.exception(f"Error processing file: {e}")
+                        finally:
+                            os.unlink(tmp_file_path)  # Delete the temporary file
+                    else:
+                        logger.warning(f"Received unexpected data format: {data[:50]}...")
+                except WebSocketDisconnect:
+                    logger.info("WebSocket connection closed by client")
+                    break
+                except Exception as e:
+                    logger.exception(f"Unexpected error in WebSocket loop: {e}")
+                    await websocket.close(code=1011)  # Internal error
+                    break
+    except Exception as e:
+        logger.exception(f"Error setting up Hume client: {e}")
+        await websocket.close(code=1011)  # Internal error

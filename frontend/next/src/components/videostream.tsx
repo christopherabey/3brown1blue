@@ -20,8 +20,12 @@ const VideoStream: React.FC<VideoStreamProps> = ({
         .then((stream) => {
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
-            videoRef.current.play();
-            videoRef.current.style.transform = "scaleX(-1)"; // Mirror effect
+            videoRef.current.onloadedmetadata = () => {
+              if (videoRef.current) {
+                videoRef.current.play();
+                videoRef.current.style.transform = "scaleX(-1)"; // Mirror effect
+              }
+            };
           }
         })
         .catch((error) => {
@@ -46,12 +50,11 @@ const VideoStream: React.FC<VideoStreamProps> = ({
             canvas.height
           );
           const frameData = canvas.toDataURL("image/png");
+          console.log("Sending frame data...");
           socket.send(frameData);
         }
 
         setTimeout(captureFrame, 1000); // Adjust interval as needed
-      } else {
-        setTimeout(captureFrame, 1000); // Retry after a delay
       }
     };
 

@@ -33,7 +33,7 @@ export function Chat({ accessToken }: { accessToken: string }) {
   return (
     <>
       <Controls />
-      <div className="bg-background/50 backdrop-blur-sm border-l flex flex-col overflow-hidden">
+      <div className="bg-background/50 backdrop-blur-sm border-l flex flex-col">
         <div ref={scrollRef} className="flex-1 overflow-scroll">
           <Messages />
         </div>
