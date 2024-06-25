@@ -1,6 +1,6 @@
 # 3Brown1Blue
 
-An AI tutor that generates [3Blue1Brown](https://www.youtube.com/channel/UCYO_jab_esuFRV4b17AJtAw) style videos for teaching and visualizing any concept. Created at the Berkeley AI hackathon.
+An AI tutor that generates [3Blue1Brown](https://www.youtube.com/channel/UCYO_jab_esuFRV4b17AJtAw) style videos for teaching and visualizing any concept. Created at the Berkeley AI hackathon. Here's a demo:
 
 ## Backend
 
